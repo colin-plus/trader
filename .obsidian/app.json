@@ -4,6 +4,12 @@
   "readableLineLength": false,
   "strictLineBreaks": true,
   "showLineNumber": true,
-  "propertiesInDocument": "visible",
-  "promptDelete": false
+  "propertiesInDocument": "hidden",
+  "promptDelete": false,
+  "pdfExportSettings": {
+    "pageSize": "Letter",
+    "landscape": false,
+    "margin": "2",
+    "downscalePercent": 100
+  }
 }
