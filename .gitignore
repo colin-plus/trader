@@ -1,0 +1,9 @@
+# Obsidian 本地界面状态（机器相关，不同步，避免合并冲突）
+.obsidian/workspace.json
+.obsidian/workspace-mobile.json
+
+# 插件 data.json 可能包含密钥（如 obsidian-git 的 githubToken），一律不同步
+.obsidian/plugins/*/data.json
+
+# 系统文件
+.DS_Store
