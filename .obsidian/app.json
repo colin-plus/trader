@@ -4,7 +4,7 @@
   "readableLineLength": false,
   "strictLineBreaks": true,
   "showLineNumber": true,
-  "propertiesInDocument": "hidden",
+  "propertiesInDocument": "visible",
   "promptDelete": false,
   "pdfExportSettings": {
     "pageSize": "Letter",

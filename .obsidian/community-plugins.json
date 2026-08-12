@@ -1,4 +1,12 @@
 [
   "templater-obsidian",
-  "obsidian-git"
+  "obsidian-git",
+  "obsidian-linter",
+  "metadata-menu",
+  "tag-wrangler",
+  "homepage",
+  "obsidian-style-settings",
+  "periodic-notes",
+  "calendar",
+  "obsidian-read-it-later"
 ]
