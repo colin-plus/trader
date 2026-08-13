@@ -72,7 +72,9 @@ views:
       direction: ASC
     order:
       - file.name
+      - status
       - created
+      - updated
     sort:
       - property: created
         direction: DESC
@@ -95,7 +97,10 @@ views:
         - file.name != "复盘笔记模板.md"
         - file.folder.startsWith("03-复盘与计划/复盘笔记")
     order:
+      - file.basename
       - period
+      - file.ctime
+      - file.mtime
     sort:
       - property: period
         direction: DESC
@@ -147,15 +152,19 @@ views:
     filters:
       and:
         - file.inFolder("01-底层知识/认知清单")
+        - file.tags.contains("知识/原理")
     groupBy:
       property: formula.类别
       direction: ASC
     order:
       - file.name
+      - created
+      - updated
+      - tags
     sort:
+      - property: created
+        direction: DESC
       - property: formula.类别
-        direction: ASC
-      - property: file.name
         direction: ASC
 
 ```
