@@ -14,7 +14,7 @@ tags:
 
 ## 个股观察清单
 
-来源：02-市场研究/个股档案（type=档案 且非跟踪日志）；列：标的/代码/板块/更新；排序：updated 降序
+来源：03-市场研究/个股档案（type=档案 且非跟踪日志）；列：标的/代码/板块/更新；排序：updated 降序
 
 ```base
 formulas:
@@ -32,7 +32,7 @@ views:
       and:
         - type == "档案"
         - file.name != "跟踪日志.md"
-        - file.folder.startsWith("02-市场研究/个股档案")
+        - file.folder.startsWith("03-市场研究/个股档案")
     groupBy:
       property: file.folder
       direction: ASC
@@ -48,7 +48,7 @@ views:
 
 ## 交易计划视图
 
-来源：03-复盘与计划/交易计划（type=交易计划）；列：标的/代码/状态/创建；排序：created 降序
+来源：04-复盘与计划/交易计划（type=交易计划）；列：标的/代码/状态/创建；排序：created 降序
 
 ```base
 formulas:
@@ -66,7 +66,7 @@ views:
       and:
         - type == "交易计划"
         - file.name != "交易计划模板.md"
-        - file.folder.startsWith("03-复盘与计划/交易计划")
+        - file.folder.startsWith("04-复盘与计划/交易计划")
     groupBy:
       property: status
       direction: ASC
@@ -85,7 +85,7 @@ views:
 
 ## 复盘列表
 
-来源：03-复盘与计划/复盘笔记（type=复盘）；排序：period 降序
+来源：04-复盘与计划/复盘笔记（type=复盘）；排序：period 降序
 
 ```base
 views:
@@ -95,7 +95,7 @@ views:
       and:
         - type == "复盘"
         - file.name != "复盘笔记模板.md"
-        - file.folder.startsWith("03-复盘与计划/复盘笔记")
+        - file.folder.startsWith("04-复盘与计划/复盘笔记")
     order:
       - file.basename
       - period
@@ -111,7 +111,7 @@ views:
 
 ## 读书清单
 
-来源：06-阅读笔记（file.inFolder）；列：书/状态；按 read_status 分组（表格或看板）
+来源：02-阅读笔记（file.inFolder）；列：书/状态；按 read_status 分组（表格或看板）
 
 ```base
 formulas:
@@ -124,9 +124,9 @@ views:
     name: 读书清单
     filters:
       and:
-        - file.inFolder("06-阅读笔记")
+        - file.inFolder("02-阅读笔记")
         - type == "学习笔记"
-        - file.folder.startsWith("06-阅读笔记")
+        - file.folder.startsWith("02-阅读笔记")
     order:
       - file.name
       - type
@@ -134,7 +134,7 @@ views:
 
 ```
 
-**重建步骤**：Cmd+P → Create new base → 筛选：文件夹包含 06-阅读笔记、type 等于 学习笔记 → 加列 read_status → 视图格式切换"看板"（按 read_status 分组）。
+**重建步骤**：Cmd+P → Create new base → 筛选：文件夹包含 02-阅读笔记、type 等于 学习笔记 → 加列 read_status → 视图格式切换"看板"（按 read_status 分组）。
 
 ## 认知清单看板
 
