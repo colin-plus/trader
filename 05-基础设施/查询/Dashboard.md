@@ -17,18 +17,6 @@ tags:
 来源：02-市场研究/个股档案（type=档案 且非跟踪日志）；列：标的/代码/板块/更新；排序：updated 降序
 
 ```base
-views:
-  - type: table
-    name: 个股观察清单
-    filters:
-      and:
-        - type == "档案"
-        - file.name != "跟踪日志.md"
-    order:
-      - updated
-    sort:
-      - property: updated
-        direction: DESC
 formulas:
   ticker: ticker
   board: board
@@ -37,6 +25,23 @@ properties:
     displayName: 代码
   formula.board:
     displayName: 板块
+views:
+  - type: table
+    name: 个股观察清单
+    filters:
+      and:
+        - type == "档案"
+        - file.name != "跟踪日志.md"
+        - file.folder.startsWith("02-市场研究/个股档案")
+    groupBy:
+      property: file.folder
+      direction: ASC
+    order:
+      - file.folder
+      - file.name
+      - updated
+    sort: []
+
 ```
 
 **重建步骤**：Cmd+P → Create new base → 筛选：type 等于 档案、文件名不等于 跟踪日志 → 加列 ticker/board → 按 updated 降序。
@@ -46,18 +51,6 @@ properties:
 来源：03-复盘与计划/交易计划（type=交易计划）；列：标的/代码/状态/创建；排序：created 降序
 
 ```base
-views:
-  - type: table
-    name: 交易计划
-    filters:
-      and:
-        - type == "交易计划"
-        - file.name != "交易计划模板.md"
-    order:
-      - created
-    sort:
-      - property: created
-        direction: DESC
 formulas:
   ticker: ticker
   status: status
@@ -66,6 +59,24 @@ properties:
     displayName: 代码
   formula.status:
     displayName: 状态
+views:
+  - type: table
+    name: 交易计划
+    filters:
+      and:
+        - type == "交易计划"
+        - file.name != "交易计划模板.md"
+        - file.folder.startsWith("03-复盘与计划/交易计划")
+    groupBy:
+      property: status
+      direction: ASC
+    order:
+      - file.name
+      - created
+    sort:
+      - property: created
+        direction: DESC
+
 ```
 
 **重建步骤**：Cmd+P → Create new base → 筛选：type 等于 交易计划 → 加列 ticker/status → 按 created 降序。一眼看到哪些计划在跑、什么状态。
@@ -82,11 +93,13 @@ views:
       and:
         - type == "复盘"
         - file.name != "复盘笔记模板.md"
+        - file.folder.startsWith("03-复盘与计划/复盘笔记")
     order:
       - period
     sort:
       - property: period
         direction: DESC
+
 ```
 
 **重建步骤**：Cmd+P → Create new base → 筛选：type 等于 复盘 → 按 period 降序。
@@ -96,6 +109,11 @@ views:
 来源：06-阅读笔记（file.inFolder）；列：书/状态；按 read_status 分组（表格或看板）
 
 ```base
+formulas:
+  read_status: read_status
+properties:
+  formula.read_status:
+    displayName: 状态
 views:
   - type: table
     name: 读书清单
@@ -103,13 +121,12 @@ views:
       and:
         - file.inFolder("06-阅读笔记")
         - type == "学习笔记"
+        - file.folder.startsWith("06-阅读笔记")
     order:
       - file.name
-formulas:
-  read_status: read_status
-properties:
-  formula.read_status:
-    displayName: 状态
+      - type
+      - tags
+
 ```
 
 **重建步骤**：Cmd+P → Create new base → 筛选：文件夹包含 06-阅读笔记、type 等于 学习笔记 → 加列 read_status → 视图格式切换"看板"（按 read_status 分组）。
@@ -119,19 +136,28 @@ properties:
 来源：01-底层知识/认知清单（file.inFolder）；列：认知/类别；按「类别」分组（看板）
 
 ```base
+formulas:
+  类别: 类别
+properties:
+  formula.类别:
+    displayName: 类别
 views:
   - type: table
     name: 认知清单
     filters:
       and:
         - file.inFolder("01-底层知识/认知清单")
+    groupBy:
+      property: formula.类别
+      direction: ASC
     order:
       - file.name
-formulas:
-  类别: 类别
-properties:
-  formula.类别:
-    displayName: 类别
+    sort:
+      - property: formula.类别
+        direction: ASC
+      - property: file.name
+        direction: ASC
+
 ```
 
 **重建步骤**：Cmd+P → Create new base → 筛选：文件夹包含 01-底层知识/认知清单 → 加列 类别 → 视图格式切换"看板"（按 类别 分组）。
