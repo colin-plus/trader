@@ -152,7 +152,7 @@ views:
     filters:
       and:
         - file.inFolder("01-底层知识/认知清单")
-        - file.tags.contains("知识/原理")
+        - type == "学习笔记"
     groupBy:
       property: formula.类别
       direction: ASC
