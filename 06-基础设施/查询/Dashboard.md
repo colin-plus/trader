@@ -124,9 +124,8 @@ views:
     name: 读书清单
     filters:
       and:
-        - file.inFolder("02-阅读笔记")
-        - type == "学习笔记"
         - file.folder.startsWith("02-阅读笔记")
+        - type == "学习笔记"
     order:
       - file.name
       - type
