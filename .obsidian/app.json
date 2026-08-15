@@ -3,7 +3,7 @@
   "showInlineTitle": false,
   "readableLineLength": false,
   "strictLineBreaks": true,
-  "showLineNumber": true,
+  "showLineNumber": false,
   "propertiesInDocument": "visible",
   "promptDelete": false,
   "pdfExportSettings": {
