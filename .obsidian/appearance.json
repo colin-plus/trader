@@ -2,7 +2,7 @@
   "theme": "moonstone",
   "accentColor": "",
   "interfaceFontFamily": "",
-  "textFontFamily": "",
+  "textFontFamily": "Fira Code",
   "monospaceFontFamily": "",
   "baseFontSize": 15,
   "baseFontSizeAction": true,
