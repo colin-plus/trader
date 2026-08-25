@@ -60,7 +60,7 @@ function handleMenuClick(key) {
         }"
       >
         <span style="font-size:20px;">📈</span>
-        <span v-if="!collapsed" style="font-size:15px; font-weight:600; white-space:nowrap;">Trader Data</span>
+        <span v-if="!collapsed" style="font-size:15px; font-weight:600; white-space:nowrap;">观澜 TideScope</span>
       </div>
 
       <!-- 菜单：宽度跟随 aside -->

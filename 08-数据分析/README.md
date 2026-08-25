@@ -1,4 +1,6 @@
-# 08-数据分析
+# 观澜（TideScope）
+
+> 透过数据，观市场之澜。—— 个人交易数据抓取、分析、展示平台
 
 股票数据仓库 + 可视化仪表盘。独立于知识库文档体系的数据层项目。
 
@@ -10,7 +12,7 @@
 
 - **存储**：duckdb 单文件数据库（`data/trader.duckdb`，gitignore 不入库）
 - **后端**：FastAPI（`app/`），提供 /api/kline /api/fenjia /api/fflow 等接口
-- **前端**：Vite + Vue3 + ECharts（`web/`），前后端分离开发
+- **前端**：Vite + Vue3 + Arco Design Vue + ECharts + Lucide（`web/`），前后端分离开发
 - **采集**：`scripts/`，从东财/腾讯拉数据落 duckdb（沿用 cron 采集管道）
 
 ## 目录结构
@@ -21,7 +23,7 @@
 │   ├── main.py   启动入口
 │   ├── db.py     duckdb 连接/查询封装
 │   └── api/      路由
-├── web/          前端源码（Vite + Vue3 + ECharts）
+├── web/          前端源码（Vue3 + Arco + ECharts）
 ├── scripts/      数据采集/导入脚本
 ├── data/         duckdb 数据库文件（gitignore）
 └── .gitignore    数据库/venv/构建产物不入 git
@@ -37,7 +39,7 @@ cd 08-数据分析
 # 前端（另开终端）
 cd web
 npm install
-npm run dev        # http://localhost:5173，代理 /api 到 8000
+npm run dev        # http://localhost:5174，代理 /api 到 8000
 ```
 
 ## 数据表

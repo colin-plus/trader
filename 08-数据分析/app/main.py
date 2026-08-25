@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api import router
 
-app = FastAPI(title="Trader Data", version="0.1.0")
+app = FastAPI(title="观澜 TideScope", version="0.1.0")
 
 # 开发期允许 Vite (5173) 跨域；生产可收紧
 app.add_middleware(
@@ -23,4 +23,4 @@ app.include_router(router)
 
 @app.get("/")
 def root():
-    return {"app": "trader-data", "docs": "/docs", "api": "/api/stocks"}
+    return {"app": "tidescope", "docs": "/docs", "api": "/api/stocks"}
