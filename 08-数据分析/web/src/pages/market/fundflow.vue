@@ -2,6 +2,7 @@
 import { ref, onMounted, watch } from 'vue'
 import FundFlowChart from '../../components/FundFlowChart.vue'
 
+const tab = ref('stock')
 const stocks = ref([])
 const selected = ref('003043')
 const data = ref(null)
@@ -37,16 +38,34 @@ onMounted(async () => {
   <div>
     <div style="display:flex; align-items:center; gap:12px; margin-bottom:16px;">
       <h2 style="font-size:16px; margin:0;">资金流向</h2>
-      <a-select
-        v-model="selected"
-        :style="{ width: '180px' }"
-        :options="stocks.map(s => ({ label: `${s.name}（${s.code}）`, value: s.code }))"
-      />
-      <a-spin v-if="loading" size="small" />
-      <span style="color:#f53f3f; font-size:13px;" v-if="error">{{ error }}</span>
+      <a-tabs v-model:active-key="tab" size="small" type="line" style="flex:1;">
+        <a-tab-pane key="stock" title="个股" />
+        <a-tab-pane key="sector" title="行业板块" />
+      </a-tabs>
     </div>
-    <a-card v-if="data" :bordered="true" style="border-radius:8px;">
-      <FundFlowChart :data="data.rows" />
-    </a-card>
+
+    <!-- 个股资金流 -->
+    <template v-if="tab === 'stock'">
+      <div style="display:flex; align-items:center; gap:12px; margin-bottom:16px;">
+        <a-select
+          v-model="selected"
+          :style="{ width: '180px' }"
+          :options="stocks.map(s => ({ label: `${s.name}（${s.code}）`, value: s.code }))"
+        />
+        <a-spin v-if="loading" size="small" />
+        <span style="color:#f53f3f; font-size:13px;" v-if="error">{{ error }}</span>
+      </div>
+      <a-card v-if="data" :bordered="true" style="border-radius:8px;">
+        <FundFlowChart :data="data.rows" />
+      </a-card>
+    </template>
+
+    <!-- 行业板块资金流（待开发） -->
+    <template v-else>
+      <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:50vh; color:var(--color-text-4);">
+        <div style="font-size:36px; margin-bottom:12px;">🚧</div>
+        <div>行业板块资金流开发中</div>
+      </div>
+    </template>
   </div>
 </template>

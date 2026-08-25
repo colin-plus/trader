@@ -1,28 +1,28 @@
 // 菜单/路由单一数据源：新增功能 = 在此加一项 + 建对应页面组件
 // title: 菜单名 | path: 路由路径 | icon: Lucide 图标组件 | children: 子菜单（可选）
-import { TrendingUp, PieChart, Wallet, Database, Settings } from 'lucide-vue-next'
+import { TrendingUp, SlidersHorizontal, Star, ChartCandlestick, BarChart3, Coins, Wallet, Database, Clock, Settings } from 'lucide-vue-next'
 
 export default [
   {
-    title: '行情中心',
+    title: '行情分析',
     icon: TrendingUp,
     path: '/market',
     children: [
-      { title: 'K线', path: '/market/kline' },
-      { title: '分价分布', path: '/market/fenjia' },
-      { title: '资金流向', path: '/market/fundflow' },
+      { title: '关注标的', icon: Star, path: '/market/watchlist' },
+      { title: 'K线分析', icon: ChartCandlestick, path: '/market/kline' },
+      { title: '分价分布', icon: BarChart3, path: '/market/fenjia' },
+      { title: '资金流向', icon: Coins, path: '/market/fundflow' },  // 页面内 Tabs 切个股/行业板块
+      { title: '财务数据', icon: Wallet, path: '/market/finance' },
     ],
   },
   {
-    title: '财务分析',
-    icon: PieChart,
-    path: '/finance',
+    title: '系统管理',
+    icon: SlidersHorizontal,
+    path: '/system',
     children: [
-      { title: '财务速览', path: '/finance/overview' },
-      { title: '估值对比', path: '/finance/valuation' },
+      { title: '定时任务', icon: Clock, path: '/system/tasks' },
+      { title: '数据管理', icon: Database, path: '/system/data' },
+      { title: '设置', icon: Settings, path: '/system/settings' },
     ],
   },
-  { title: '持仓管理', icon: Wallet, path: '/position' },
-  { title: '数据管理', icon: Database, path: '/data' },
-  { title: '设置', icon: Settings, path: '/settings' },
 ]
