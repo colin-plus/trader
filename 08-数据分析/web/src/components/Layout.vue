@@ -1,12 +1,16 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { PanelLeftClose, PanelLeftOpen } from 'lucide-vue-next'
 import menus from '../menus.js'
+import AppHeader from './AppHeader.vue'
 
 const route = useRoute()
 const router = useRouter()
-const collapsed = ref(false)
+
+// 折叠状态：localStorage 持久化（刷新保持用户偏好）
+const COLLAPSED_KEY = 'tidescope.sidebar.collapsed'
+const collapsed = ref(localStorage.getItem(COLLAPSED_KEY) === '1')
+watch(collapsed, (v) => localStorage.setItem(COLLAPSED_KEY, v ? '1' : '0'))
 
 // 当前选中菜单（与路由同步）
 const selectedKeys = computed(() => [route.path])
@@ -107,36 +111,15 @@ function handleMenuClick(key) {
         </template>
       </a-menu>
 
-      <!-- 底部：折叠按钮 -->
-      <div
-        :style="{
-          borderTop: '1px solid var(--color-border-2)',
-          padding: collapsed ? '8px 0' : '8px 10px',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          flexShrink: 0,
-        }"
-      >
-        <a-button
-          type="text"
-          size="mini"
-          :shape="collapsed ? 'circle' : 'round'"
-          @click="collapsed = !collapsed"
-          style="color: var(--color-text-3);"
-        >
-          <panel-left-open v-if="collapsed" :size="16" />
-          <template v-else>
-            <panel-left-close :size="16" />
-            <span style="margin-left:4px; font-size:12px;">收起侧边栏</span>
-          </template>
-        </a-button>
-      </div>
+      <!-- 侧边栏底部折叠按钮已移至 Header（见 AppHeader.vue） -->
     </aside>
 
-    <!-- 内容区 -->
-    <main style="flex:1; overflow-y:auto; padding:20px 24px;">
-      <router-view />
+    <!-- 右侧：Header + 内容区（纵向堆叠） -->
+    <main style="flex:1; display:flex; flexDirection:column; overflow:hidden;">
+      <AppHeader :collapsed="collapsed" @toggle="collapsed = !collapsed" />
+      <div style="flex:1; overflow-y:auto; padding:20px 24px;">
+        <router-view />
+      </div>
     </main>
   </div>
 </template>

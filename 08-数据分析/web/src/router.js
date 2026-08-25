@@ -61,8 +61,14 @@ function makeRoute(path, title) {
 
 const routes = buildRoutes(menus)
 
-routes.push({ path: '/', redirect: '/market/kline' })
-routes.push({ path: '/:pathMatch(.*)*', redirect: '/market/kline' })
+// 首页：不在侧边菜单（面包屑第一项入口），单独注册
+routes.push({
+  path: '/home',
+  meta: { title: '首页' },
+  component: () => import('./pages/home.vue'),
+})
+routes.push({ path: '/', redirect: '/home' })
+routes.push({ path: '/:pathMatch(.*)*', redirect: '/home' })
 
 const router = createRouter({
   history: createWebHistory(),
