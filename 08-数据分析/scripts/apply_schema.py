@@ -107,6 +107,35 @@ SCHEMA = {
         "pk": ["code", "report_date", "kind"],
         "checks": ["kind IN ('dividend','snapshot','income','balance')"],
     },
+    "position": {
+        "comment": "持仓快照（手动维护，抄券商口径；交易执行权威在券商）",
+        "fk": "investable_asset",
+        "columns": [
+            ("code", "VARCHAR NOT NULL", "标的代码"),
+            ("shares", "INTEGER NOT NULL", "持仓股数"),
+            ("cost", "DOUBLE NOT NULL", "成本价（摊薄，券商口径）"),
+            ("updated_at", "TIMESTAMP DEFAULT now()", "最近更新"),
+        ],
+        "pk": ["code"],
+        "checks": [],
+    },
+    "transaction": {
+        "comment": "交易记录（事实表，金额/费用抄券商）",
+        "fk": "investable_asset",
+        "columns": [
+            ("id", "INTEGER NOT NULL", "交易序号（唯一，手动分配）"),
+            ("code", "VARCHAR NOT NULL", "标的代码"),
+            ("trade_date", "DATE NOT NULL", "交易日"),
+            ("direction", "VARCHAR NOT NULL", "方向：buy=买入 / sell=卖出"),
+            ("price", "DOUBLE NOT NULL", "成交价"),
+            ("shares", "INTEGER NOT NULL", "数量（股）"),
+            ("amount", "DOUBLE NOT NULL", "金额（价×量）"),
+            ("fee", "DOUBLE DEFAULT 0 NOT NULL", "费用（佣金+过户费）"),
+            ("note", "VARCHAR", "备注"),
+        ],
+        "pk": ["id"],
+        "checks": ["direction IN ('buy','sell')"],
+    },
     "meta": {
         "comment": "库级元信息（键值）",
         "fk": None,
@@ -123,6 +152,8 @@ SCHEMA = {
 TABLE_ORDER = [
     "investable_asset",
     "watchlist",
+    "position",
+    "transaction",
     "daily_kline",
     "volume_profile",
     "daily_capital_flow",
@@ -162,11 +193,18 @@ def main():
     try:
         # 1. 导出全部现有数据（从旧库只读导出，不影响任何依赖；支持旧表名映射）
         for t in TABLE_ORDER:
-            src_table = LEGACY_MAP.get(t, t)
+            # 优先读新表名；新表不存在时回退旧表名（迁移场景）
+            src_table = t
             if src_con.execute(
                 "SELECT COUNT(*) FROM information_schema.tables WHERE table_name=?", [src_table]
             ).fetchone()[0] == 0:
-                continue
+                legacy = LEGACY_MAP.get(t)
+                if legacy and src_con.execute(
+                    "SELECT COUNT(*) FROM information_schema.tables WHERE table_name=?", [legacy]
+                ).fetchone()[0] > 0:
+                    src_table = legacy
+                else:
+                    continue
             n = src_con.execute(f"SELECT COUNT(*) FROM {src_table}").fetchone()[0]
             if n > 0:
                 src_con.execute(f"COPY (SELECT * FROM {src_table}) TO '{tmp / t}.parquet' (FORMAT PARQUET)")

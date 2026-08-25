@@ -1,7 +1,7 @@
-"""API 路由：行情 / 分价 / 资金流 / 财务 / 标的。"""
+"""API 路由：行情 / 分价 / 资金流 / 财务 / 标的 / 我的。"""
 from fastapi import APIRouter, HTTPException, Query
 
-from app import db
+from app import db, performance
 
 router = APIRouter(prefix="/api")
 
@@ -89,6 +89,59 @@ def finance(code: str, kind: str = Query("dividend", pattern="^(dividend|snapsho
         [code, kind],
     )
     return {"code": code, "name": _asset_name(code), "kind": kind, "rows": rows}
+
+
+@router.get("/positions")
+def positions():
+    """持仓列表（含市价/浮盈，join performance 计算）"""
+    rows = db.query_all(
+        "SELECT p.code, i.name, p.shares, p.cost, p.updated_at "
+        "FROM position p JOIN investable_asset i ON i.code = p.code ORDER BY p.updated_at DESC"
+    )
+    result = []
+    for r in rows:
+        ap = performance.asset_performance(r["code"])
+        r.update({
+            "market_value": ap["position"]["market_value"],
+            "unrealized": ap["position"]["unrealized"],
+            "unrealized_pct": ap["position"]["unrealized_pct"],
+            "latest_close": ap["latest_close"],
+        })
+        result.append(r)
+    return result
+
+
+@router.get("/transactions")
+def transactions(code: str | None = Query(None)):
+    """交易记录（可按标的过滤）"""
+    if code:
+        if code not in _valid_codes():
+            raise HTTPException(404, f"未跟踪的股票代码: {code}")
+        rows = db.query_all(
+            "SELECT t.id, t.code, i.name, t.trade_date, t.direction, t.price, t.shares, t.amount, t.fee, t.note "
+            "FROM transaction t JOIN investable_asset i ON i.code = t.code "
+            "WHERE t.code = ? ORDER BY t.trade_date, t.id", [code]
+        )
+    else:
+        rows = db.query_all(
+            "SELECT t.id, t.code, i.name, t.trade_date, t.direction, t.price, t.shares, t.amount, t.fee, t.note "
+            "FROM transaction t JOIN investable_asset i ON i.code = t.code ORDER BY t.trade_date, t.id"
+        )
+    return rows
+
+
+@router.get("/performance/summary")
+def perf_summary():
+    """全账户收益统计汇总（须在 /performance/{code} 之前定义）"""
+    return performance.summary()
+
+
+@router.get("/performance/{code}")
+def perf(code: str):
+    """单标的收益统计（Performance 概念：实时计算，不建表）"""
+    if code not in _valid_codes():
+        raise HTTPException(404, f"未跟踪的股票代码: {code}")
+    return performance.asset_performance(code)
 
 
 @router.get("/meta")

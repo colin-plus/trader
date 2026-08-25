@@ -8,12 +8,16 @@
 ```
 investable_asset（标的主数据）
   ├── watchlist        关注标的（用户关系）
+  ├── position         持仓快照（我的数据，抄券商）
+  ├── transaction      交易记录（我的数据，抄券商）
   ├── daily_kline      日线行情（1 标的 : N 日）
   ├── volume_profile   分价分布（1 标的 : N 日 : N 价格档）
   ├── daily_capital_flow 资金流向·日（1 标的 : N 日）
   └── finance          财务数据（1 标的 : N 报告期 × kind）
 meta                    库级元信息（更新时间等）
 ```
+
+**Performance（收益统计）**：领域概念，**不建表**——由 position + transaction + daily_kline（最新收盘价）实时计算（app/performance.py），API `/api/performance/*`。口径：最终对账以券商 APP 为准，本层为辅助分析（持仓市值/浮盈/已实现盈亏/交易统计）。
 
 ### 工程约定（非教条，务实原则）
 
@@ -62,6 +66,51 @@ meta                    库级元信息（更新时间等）
 | active | BOOLEAN | DEFAULT TRUE, NOT NULL | 是否启用（可暂时移除不删记录） |
 
 **说明**：用 `active` 软移除而非 DELETE——保留历史关注痕迹；前端只查 `WHERE active`。
+
+---
+
+## 表：position（持仓快照）
+
+**用途**："我的数据"。当前持仓状态（股数/成本），手动维护、抄券商口径。**交易执行权威在券商**，本表只是展示/计算基准。
+
+| 字段 | 类型 | 约束 | 说明 |
+|---|---|---|---|
+| code | VARCHAR | PK, NOT NULL, FK→investable_asset | 标的代码 |
+| shares | INTEGER | NOT NULL | 持仓股数 |
+| cost | DOUBLE | NOT NULL | 成本价（摊薄，券商口径） |
+| updated_at | TIMESTAMP | DEFAULT now() | 最近更新 |
+
+**说明**：快照而非推导——券商配股/分红/费用会改变真实成本，推导会失真；手动维护与券商一致。由 transaction 推导只作为核对（不实现）。
+
+---
+
+## 表：transaction（交易记录）
+
+**用途**："我的数据"。每一笔买卖事实（金额/费用抄券商），用于 Performance 计算与交易复盘。与知识库"交易明细表"同构。
+
+| 字段 | 类型 | 约束 | 说明 |
+|---|---|---|---|
+| id | INTEGER | PK, NOT NULL | 交易序号（手动分配） |
+| code | VARCHAR | NOT NULL, FK→investable_asset | 标的代码 |
+| trade_date | DATE | NOT NULL | 交易日 |
+| direction | VARCHAR | NOT NULL, CHECK IN ('buy','sell') | 买卖方向 |
+| price | DOUBLE | NOT NULL | 成交价 |
+| shares | INTEGER | NOT NULL | 数量（股） |
+| amount | DOUBLE | NOT NULL | 金额（价×量） |
+| fee | DOUBLE | DEFAULT 0, NOT NULL | 费用（佣金+过户费） |
+| note | VARCHAR | NULL | 备注 |
+
+**说明**：事实表（事件流），用代理键 id（同一天多笔交易）。`amount = price × shares` 由录入方保证（库内不加冗余 CHECK）。数字抄券商，不手算。
+
+---
+
+## Performance（收益统计·概念）
+
+**不建表**，实时计算（`app/performance.py`）：
+
+- 单标的：持仓市值 = shares × 最新收盘价；浮盈 = (最新价 − cost) × shares；已实现 = Σ卖出净收 − Σ卖出股数 × cost
+- 汇总：全账户市值/成本/浮盈/已实现，按标的展开
+- **口径**：辅助分析（胜率/盈亏分布），最终对账以券商 APP 为准
 
 ---
 

@@ -51,11 +51,15 @@ npm run dev        # http://localhost:5174，代理 /api 到 8000
 |---|---|---|
 | investable_asset | 标的主数据（股票/ETF：代码/名称/类型/交易所/行业） | 手动维护 |
 | watchlist | 关注标的（加入时间/备注/排序/启用） | 手动维护 |
+| position | 持仓快照（股数/成本，抄券商口径） | 手动维护 |
+| transaction | 交易记录（买卖事实，金额/费用抄券商） | 手动维护 |
 | daily_kline | 日线行情（开高低收/量） | 腾讯 fqkline |
 | volume_profile | 分价分布（日期+价格+手数+BS） | 东财分时聚合 |
 | daily_capital_flow | 资金流向·日（主力/超大单/大单/中单/小单） | 东财 fflow |
 | finance | 财务数据（kind: dividend/snapshot/income/balance + JSON payload） | 东财 F10 |
 | meta | 元信息（更新时间等） | 采集脚本 |
+
+> Performance（收益统计）= 领域概念不建表，position+transaction+kline 实时计算（/api/performance/*）
 
 ## 数据模型约定
 
