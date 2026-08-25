@@ -107,10 +107,11 @@ function handleMenuClick(key) {
         </div>
         <a-tooltip :content="collapsed ? '展开菜单' : '收起菜单'" position="right">
           <a-button
+            type="text"
             size="mini"
             shape="circle"
             @click="collapsed = !collapsed"
-            style="border: 1px solid var(--color-border-3); color: var(--color-text-2);"
+            style="color: var(--color-text-2);"
           >
             <icon-menu-unfold v-if="collapsed" />
             <icon-menu-fold v-else />
