@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { IconMenuFold, IconMenuUnfold } from '@arco-design/web-vue/es/icon'
 import menus from '../menus.js'
 
 const route = useRoute()
@@ -111,7 +112,6 @@ function handleMenuClick(key) {
             size="mini"
             shape="circle"
             @click="collapsed = !collapsed"
-            style="color: var(--color-text-2);"
           >
             <icon-menu-unfold v-if="collapsed" />
             <icon-menu-fold v-else />
