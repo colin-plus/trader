@@ -1,127 +1,85 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import menus from '../menus.js'
 
 const route = useRoute()
+const router = useRouter()
 const collapsed = ref(false)
 
-// 当前激活的顶级菜单（用于父级高亮）
-const activeTop = computed(() => {
-  const path = route.path
-  for (const item of menus) {
-    if (item.children) {
-      if (item.children.some(c => path.startsWith(c.path))) return item.path
-    } else if (path.startsWith(item.path)) {
-      return item.path
-    }
-  }
-  return ''
-})
+// 当前选中菜单（与路由同步）
+const selectedKeys = computed(() => [route.path])
 
-// 展开的顶级菜单组
-const openGroups = ref(new Set())
-
-// 路由变化时：自动展开当前路由所属的组（不关闭其他组）
+// 展开的顶级菜单组：路由变化时自动展开所属组
+const openKeys = ref([])
 watch(
   () => route.path,
   (path) => {
-    for (const item of menus) {
-      if (item.children) {
-        const hit = item.children.some(c => path.startsWith(c.path))
-        if (hit) {
-          const s = new Set(openGroups.value)
-          s.add(item.path)
-          openGroups.value = s
-        }
-      }
+    const group = menus.find(item =>
+      item.children && item.children.some(c => path.startsWith(c.path))
+    )
+    if (group && !openKeys.value.includes(group.path)) {
+      openKeys.value = [...openKeys.value, group.path]
     }
   },
   { immediate: true }
 )
 
-function toggleGroup(path) {
-  const s = new Set(openGroups.value)
-  s.has(path) ? s.delete(path) : s.add(path)
-  openGroups.value = s
-}
-
-function isActive(path) {
-  return route.path === path || route.path.startsWith(path + '/')
+// 菜单点击 → 路由跳转（子菜单由 a-menu 自动处理，这里处理叶子项）
+function handleMenuClick(key) {
+  if (key && key.startsWith('/')) router.push(key)
 }
 </script>
 
 <template>
   <div style="display:flex; height:100vh; overflow:hidden;">
-    <!-- 侧边栏 -->
-    <aside
-      :style="{
-        width: collapsed ? '52px' : '200px',
-        background: '#151b23',
-        borderRight: '1px solid var(--border)',
-        display: 'flex',
-        flexDirection: 'column',
-        transition: 'width .18s ease',
-        flexShrink: 0,
-      }"
-    >
-      <!-- 顶部：标题 + 折叠按钮 -->
-      <div style="display:flex; align-items:center; gap:8px; padding:14px 12px; border-bottom:1px solid var(--border);">
-        <span style="font-size:20px; cursor:pointer; user-select:none;" @click="collapsed = !collapsed" title="折叠/展开">
-          {{ collapsed ? '📈' : '📈 Trader' }}
-        </span>
-        <span v-if="!collapsed" style="font-size:14px; font-weight:600; color:var(--text); flex:1;">Trader Data</span>
-        <span v-if="!collapsed" style="cursor:pointer; color:var(--muted); font-size:12px;" @click="collapsed = !collapsed">◀</span>
+    <!-- 侧边栏（Arco Menu） -->
+    <aside style="display:flex; flex-direction:column; flex-shrink:0; background:var(--color-bg-2); border-right:1px solid var(--color-border-2);">
+      <!-- 顶部标题 + 折叠按钮 -->
+      <div style="display:flex; align-items:center; gap:8px; padding:14px 16px; border-bottom:1px solid var(--color-border-2);">
+        <span style="font-size:20px;">📈</span>
+        <span v-if="!collapsed" style="font-size:15px; font-weight:600; flex:1; white-space:nowrap;">Trader Data</span>
+        <a-button
+          size="mini"
+          shape="circle"
+          :style="{ border: 'none', background: 'transparent', color: 'var(--color-text-3)' }"
+          @click="collapsed = !collapsed"
+        >
+          <icon-menu-unfold v-if="collapsed" />
+          <icon-menu-fold v-else />
+        </a-button>
       </div>
 
       <!-- 菜单 -->
-      <nav style="flex:1; overflow-y:auto; padding:8px 0;">
+      <a-menu
+        :style="{ width: collapsed ? '48px' : '200px', height: 'calc(100vh - 53px)', overflow: 'auto', transition: 'width .18s ease' }"
+        :collapsed="collapsed"
+        :selected-keys="selectedKeys"
+        v-model:open-keys="openKeys"
+        @menu-item-click="handleMenuClick"
+      >
         <template v-for="item in menus" :key="item.path">
           <!-- 有子菜单 -->
-          <template v-if="item.children">
-            <div
-              @click="toggleGroup(item.path)"
-              :style="{
-                display:'flex', alignItems:'center', gap:'8px', padding:'10px 14px',
-                cursor:'pointer', fontSize:'14px', color: activeTop === item.path ? 'var(--accent)' : 'var(--text)',
-                background: activeTop === item.path ? '#1c2431' : 'transparent',
-              }"
-            >
+          <a-sub-menu v-if="item.children" :key="item.path" :key-property="item.path">
+            <template #title>
               <span>{{ item.icon }}</span>
-              <span v-if="!collapsed" style="flex:1;">{{ item.title }}</span>
-              <span v-if="!collapsed" style="font-size:10px; color:var(--muted);">
-                {{ openGroups.has(item.path) ? '▾' : '▸' }}
-              </span>
-            </div>
-            <div v-if="openGroups.has(item.path) && !collapsed">
-              <router-link
-                v-for="child in item.children"
-                :key="child.path"
-                :to="child.path"
-                :style="{
-                  display:'block', padding:'8px 14px 8px 44px', fontSize:13,
-                  color: isActive(child.path) ? 'var(--accent)' : 'var(--muted)',
-                  textDecoration:'none', borderLeft: isActive(child.path) ? '2px solid var(--accent)' : '2px solid transparent',
-                }"
-              >{{ child.title }}</router-link>
-            </div>
-          </template>
+              <span v-if="!collapsed" style="margin-left:8px;">{{ item.title }}</span>
+            </template>
+            <a-menu-item v-for="child in item.children" :key="child.path">
+              <span style="margin-left:8px;">{{ child.title }}</span>
+            </a-menu-item>
+          </a-sub-menu>
 
           <!-- 无子菜单 -->
-          <router-link
-            v-else
-            :to="item.path"
-            :style="{
-              display:'flex', alignItems:'center', gap:'8px', padding:'10px 14px',
-              fontSize:'14px', color: isActive(item.path) ? 'var(--accent)' : 'var(--text)',
-              textDecoration:'none', background: isActive(item.path) ? '#1c2431' : 'transparent',
-            }"
-          >{{ item.icon }} <span v-if="!collapsed">{{ item.title }}</span></router-link>
+          <a-menu-item v-else :key="item.path">
+            <span>{{ item.icon }}</span>
+            <span v-if="!collapsed" style="margin-left:8px;">{{ item.title }}</span>
+          </a-menu-item>
         </template>
-      </nav>
+      </a-menu>
 
-      <!-- 底部：数据库更新时间 -->
-      <div v-if="!collapsed" style="padding:10px 14px; border-top:1px solid var(--border); font-size:11px; color:var(--muted);">
+      <!-- 底部 -->
+      <div v-if="!collapsed" style="padding:10px 16px; border-top:1px solid var(--color-border-2); font-size:11px; color:var(--color-text-4); white-space:nowrap;">
         数据仓库 · duckdb
       </div>
     </aside>

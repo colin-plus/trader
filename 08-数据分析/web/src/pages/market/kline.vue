@@ -36,15 +36,17 @@ onMounted(async () => {
 <template>
   <div>
     <div style="display:flex; align-items:center; gap:12px; margin-bottom:16px;">
-      <h2 style="font-size:16px;">日线 K 线</h2>
-      <select v-model="selected" style="padding:6px 10px; background:var(--panel); color:var(--text); border:1px solid var(--border); border-radius:6px;">
-        <option v-for="s in stocks" :key="s.code" :value="s.code">{{ s.name }}（{{ s.code }}）</option>
-      </select>
-      <span class="muted" v-if="loading">加载中…</span>
-      <span style="color:#ef4444; font-size:13px;" v-if="error">{{ error }}</span>
+      <h2 style="font-size:16px; margin:0;">日线 K 线</h2>
+      <a-select
+        v-model="selected"
+        :style="{ width: '180px' }"
+        :options="stocks.map(s => ({ label: `${s.name}（${s.code}）`, value: s.code }))"
+      />
+      <a-spin v-if="loading" size="small" />
+      <span style="color:#f53f3f; font-size:13px;" v-if="error">{{ error }}</span>
     </div>
-    <div class="panel" v-if="data">
+    <a-card v-if="data" :bordered="true" style="border-radius:8px;">
       <KlineChart :data="data.rows" />
-    </div>
+    </a-card>
   </div>
 </template>
