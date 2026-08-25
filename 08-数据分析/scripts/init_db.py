@@ -120,10 +120,58 @@ def main():
     DB_PATH.parent.mkdir(parents=True, exist_ok=True)
     con = duckdb.connect(str(DB_PATH))
 
-    con.execute("CREATE TABLE IF NOT EXISTS daily_kline (code VARCHAR, date DATE, open DOUBLE, high DOUBLE, low DOUBLE, close DOUBLE, volume DOUBLE)")
-    con.execute("CREATE TABLE IF NOT EXISTS fenjia (code VARCHAR, date DATE, price DOUBLE, vol INTEGER, buy INTEGER, sell INTEGER)")
-    con.execute("CREATE TABLE IF NOT EXISTS fund_flow (code VARCHAR, date DATE, zhuli DOUBLE, zdc DOUBLE, dd DOUBLE, zd DOUBLE, xd DOUBLE, pct DOUBLE, close DOUBLE, chg DOUBLE)")
+    # 建表（与 migrate_schema.py 的规范 schema 一致）
+    con.execute("""
+    CREATE TABLE IF NOT EXISTS investable_asset (
+      code       VARCHAR PRIMARY KEY,
+      name       VARCHAR NOT NULL,
+      type       VARCHAR NOT NULL,
+      exchange   VARCHAR,
+      industry   VARCHAR,
+      list_date  DATE,
+      created_at TIMESTAMP DEFAULT now()
+    )""")
+    con.execute("""
+    CREATE TABLE IF NOT EXISTS watchlist (
+      code       VARCHAR PRIMARY KEY REFERENCES investable_asset(code),
+      added_at   DATE DEFAULT current_date,
+      note       VARCHAR,
+      sort_order INTEGER DEFAULT 0,
+      active     BOOLEAN DEFAULT TRUE
+    )""")
+    con.execute("""
+    CREATE TABLE IF NOT EXISTS daily_kline (
+      code   VARCHAR REFERENCES investable_asset(code),
+      date   DATE, open DOUBLE, high DOUBLE, low DOUBLE, close DOUBLE, volume DOUBLE,
+      PRIMARY KEY (code, date)
+    )""")
+    con.execute("""
+    CREATE TABLE IF NOT EXISTS volume_profile (
+      code  VARCHAR REFERENCES investable_asset(code),
+      date  DATE, price DOUBLE, vol INTEGER, buy INTEGER, sell INTEGER,
+      PRIMARY KEY (code, date, price)
+    )""")
+    con.execute("""
+    CREATE TABLE IF NOT EXISTS fund_flow (
+      code  VARCHAR REFERENCES investable_asset(code),
+      date  DATE, zhuli DOUBLE, zdc DOUBLE, dd DOUBLE, zd DOUBLE, xd DOUBLE,
+      pct DOUBLE, close DOUBLE, chg DOUBLE,
+      PRIMARY KEY (code, date)
+    )""")
+    con.execute("""
+    CREATE TABLE IF NOT EXISTS finance (
+      code        VARCHAR REFERENCES investable_asset(code),
+      report_date DATE, kind VARCHAR, payload JSON,
+      PRIMARY KEY (code, report_date, kind)
+    )""")
     con.execute("CREATE TABLE IF NOT EXISTS meta (key VARCHAR PRIMARY KEY, value VARCHAR)")
+
+    # 填充 investable_asset（INSERT OR REPLACE 幂等）
+    for code, name, tcode in STOCKS:
+        con.execute(
+            "INSERT OR REPLACE INTO investable_asset (code, name, type) VALUES (?, ?, 'stock')",
+            [code, name],
+        )
 
     for code, name, tcode in STOCKS:
         # 日线
@@ -140,10 +188,10 @@ def main():
         # 分价
         df = load_fenjia(code)
         if not df.empty:
-            con.execute("DELETE FROM fenjia WHERE code = ?", [code])
+            con.execute("DELETE FROM volume_profile WHERE code = ?", [code])
             con.register("tmp_fj", df)
             con.execute(
-                "INSERT INTO fenjia (code, date, price, vol, buy, sell) "
+                "INSERT INTO volume_profile (code, date, price, vol, buy, sell) "
                 "SELECT code, date, price, vol, buy, sell FROM tmp_fj"
             )
             print(f"✓ {name} 分价: {len(df)} 行")

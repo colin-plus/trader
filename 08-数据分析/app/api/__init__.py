@@ -47,14 +47,14 @@ def kline(code: str, days: int = Query(120, ge=10, le=1000)):
     return {"code": code, "name": _asset_name(code), "rows": rows}
 
 
-@router.get("/price-distribution/{code}")
-def price_distribution(code: str, days: int = Query(5, ge=1, le=30)):
+@router.get("/volume-profile/{code}")
+def volume_profile(code: str, days: int = Query(5, ge=1, le=30)):
     """分价成交量（近 N 个交易日，含主动买/卖）"""
     if code not in _valid_codes():
         raise HTTPException(404, f"未跟踪的股票代码: {code}")
     rows = db.query_all(
-        "SELECT date, price, vol, buy, sell FROM price_distribution "
-        "WHERE code = ? AND date >= (SELECT MAX(date) - INTERVAL (? - 1) DAY FROM price_distribution WHERE code = ?) "
+        "SELECT date, price, vol, buy, sell FROM volume_profile "
+        "WHERE code = ? AND date >= (SELECT MAX(date) - INTERVAL (? - 1) DAY FROM volume_profile WHERE code = ?) "
         "ORDER BY date, price",
         [code, days, code],
     )
