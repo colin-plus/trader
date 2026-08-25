@@ -1,21 +1,21 @@
-"""duckdb 连接与查询封装。"""
+"""duckdb 连接与查询封装。
+
+读写分离（单写者模型）：
+- 后端（本模块）只读连接 —— 查询/展示
+- 写操作由采集脚本（scripts/）独占执行
+- 避免后端与采集脚本争写锁
+"""
 import pathlib
 
 import duckdb
 
 DB_PATH = pathlib.Path(__file__).parent.parent / "data" / "trader.duckdb"
 
-STOCKS = {
-    "603005": "晶方科技",
-    "601838": "成都银行",
-    "003043": "华亚智能",
-}
-
 _conn = None
 
 
 def get_conn():
-    """单例连接（duckdb 默认单写者，读多场景一个连接够用）"""
+    """单例只读连接"""
     global _conn
     if _conn is None:
         _conn = duckdb.connect(str(DB_PATH), read_only=True)
@@ -31,8 +31,15 @@ def query_df(sql, params=None):
 
 
 def query_all(sql, params=None):
-    """执行查询返回 dict 列表（date 字段转为 YYYY-MM-DD 字符串）"""
+    """执行查询返回 dict 列表（date 字段转为 YYYY-MM-DD 字符串，NaT/NaN → None）"""
+    import pandas as pd
+
     df = query_df(sql, params)
-    if not df.empty and "date" in df.columns:
-        df["date"] = df["date"].astype(str)
+    if not df.empty:
+        for col in df.columns:
+            if "date" in col.lower() or col in ("added_at",):
+                df[col] = df[col].where(pd.notna(df[col]), None).astype("string")
+                df[col] = df[col].map(lambda v: str(v)[:10] if v is not None and str(v) != "<NA>" else None)
+            else:
+                df[col] = df[col].where(pd.notna(df[col]), None)
     return df.to_dict(orient="records")
