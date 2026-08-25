@@ -1,6 +1,8 @@
 # 数据库文件（本地数据，不入 git）
 data/*.duckdb
 data/*.duckdb.wal
+data/*.duckdb.bak
+data/*.duckdb.new
 
 # Python 虚拟环境
 .venv/
