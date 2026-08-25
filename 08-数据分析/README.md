@@ -44,6 +44,9 @@ npm run dev        # http://localhost:5174，代理 /api 到 8000
 
 ## 数据表
 
+> 详细表/字段说明、工程约定、变更流程见 **[docs/schema.md](docs/schema.md)**（权威文档）。
+> 数据库结构应用/重建：`.venv/bin/python scripts/apply_schema.py`（幂等，blue-green 替换，数据无损）。
+
 | 表 | 内容 | 来源 |
 |---|---|---|
 | investable_asset | 标的主数据（股票/ETF：代码/名称/类型/交易所/行业） | 手动维护 |
