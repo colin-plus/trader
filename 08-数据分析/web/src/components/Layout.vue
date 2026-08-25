@@ -74,7 +74,7 @@ function handleMenuClick(key) {
             flex-shrink: 0;
           "
         >澜</span>
-        <span v-if="!collapsed" style="font-size:15px; font-weight:600; white-space:nowrap;">观澜 TideScope</span>
+        <span v-if="!collapsed" style="font-size:15px; font-weight:600; white-space:nowrap;">TideScope</span>
       </div>
 
       <!-- 菜单：宽度跟随 aside -->
