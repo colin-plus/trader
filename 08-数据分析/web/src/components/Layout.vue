@@ -47,7 +47,7 @@ function handleMenuClick(key) {
         overflow: 'hidden',
       }"
     >
-      <!-- 顶部标题：展开=[澜徽标+文字]，收起=[仅居中澜徽标] -->
+      <!-- 顶部标题：展开=[观澜 TideScope 文字]，收起=[仅居中澜徽标] -->
       <div
         :style="{
           display: 'flex',
@@ -60,6 +60,7 @@ function handleMenuClick(key) {
         }"
       >
         <span
+          v-if="collapsed"
           style="
             display: inline-flex;
             align-items: center;
@@ -74,7 +75,7 @@ function handleMenuClick(key) {
             flex-shrink: 0;
           "
         >澜</span>
-        <span v-if="!collapsed" style="font-size:15px; font-weight:600; white-space:nowrap;">TideScope</span>
+        <span v-if="!collapsed" style="font-size:15px; font-weight:600; white-space:nowrap;">观澜 TideScope</span>
       </div>
 
       <!-- 菜单：宽度跟随 aside -->
