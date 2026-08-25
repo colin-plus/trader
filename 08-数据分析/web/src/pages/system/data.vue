@@ -31,7 +31,7 @@ onMounted(load)
     <a-card :bordered="true" style="border-radius:8px;">
       <a-descriptions title="数据库概览" :column="2" bordered size="small">
         <a-descriptions-item label="数据表">
-          {{ meta?.meta?.length ? '3 张表（daily_kline / fenjia / fund_flow）' : '—' }}
+          {{ meta?.meta?.length ? '7 张表（investable_asset / daily_kline / volume_profile / daily_capital_flow / finance / watchlist / meta）' : '—' }}
         </a-descriptions-item>
         <a-descriptions-item label="最后更新">
           {{ meta?.meta?.find(m => m.key === 'updated_at')?.value || '—' }}

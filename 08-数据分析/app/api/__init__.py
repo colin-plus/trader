@@ -63,13 +63,13 @@ def volume_profile(code: str, days: int = Query(5, ge=1, le=30)):
     return {"code": code, "name": _asset_name(code), "rows": rows}
 
 
-@router.get("/fundflow/{code}")
-def fundflow(code: str, days: int = Query(20, ge=5, le=120)):
-    """资金流向（主力/超大单/大单/中单/小单，单位：亿）"""
+@router.get("/capital-flow/{code}")
+def capital_flow(code: str, days: int = Query(20, ge=5, le=120)):
+    """资金流向（日）（主力/超大单/大单/中单/小单，单位：亿）"""
     if code not in _valid_codes():
         raise HTTPException(404, f"未跟踪的股票代码: {code}")
     rows = db.query_all(
-        "SELECT date, zhuli, zdc, dd, zd, xd, pct, close, chg FROM fund_flow "
+        "SELECT date, zhuli, zdc, dd, zd, xd, pct, close, chg FROM daily_capital_flow "
         "WHERE code = ? ORDER BY date DESC LIMIT ?",
         [code, days],
     )
@@ -80,8 +80,8 @@ def fundflow(code: str, days: int = Query(20, ge=5, le=120)):
 
 
 @router.get("/finance/{code}")
-def finance(code: str, kind: str = Query("dividend", pattern="^(dividend|income|balance)$")):
-    """财务数据（默认分红）"""
+def finance(code: str, kind: str = Query("dividend", pattern="^(dividend|snapshot|income|balance)$")):
+    """财务数据（默认分红；kind: dividend/snapshot/income/balance）"""
     if code not in _valid_codes():
         raise HTTPException(404, f"未跟踪的股票代码: {code}")
     rows = db.query_all(

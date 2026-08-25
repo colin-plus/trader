@@ -10,7 +10,7 @@ investable_asset（标的主数据）
   ├── watchlist        关注标的（用户关系）
   ├── daily_kline      日线行情（1 标的 : N 日）
   ├── volume_profile   分价分布（1 标的 : N 日 : N 价格档）
-  ├── fund_flow        资金流向（1 标的 : N 日）
+  ├── daily_capital_flow 资金流向·日（1 标的 : N 日）
   └── finance          财务数据（1 标的 : N 报告期 × kind）
 meta                    库级元信息（更新时间等）
 ```
@@ -100,7 +100,7 @@ meta                    库级元信息（更新时间等）
 
 ---
 
-## 表：fund_flow（资金流向）
+## 表：daily_capital_flow（资金流向·日）
 
 **用途**：每日主力/散户资金动向，资金流页数据源。来源：东财 fflow。金额单位：亿元。
 
@@ -123,13 +123,13 @@ meta                    库级元信息（更新时间等）
 
 ## 表：finance（财务数据）
 
-**用途**：财务/分红等非行情数据，财务页数据源。来源：东财 F10。**宽表 + kind 分类**——新指标加新 kind 不用改表结构。
+**用途**：财务/分红等非行情数据，财务页数据源。来源：东财 F10。**单表 + kind 分类**——新指标加新 kind 不用改表结构（季度快照/利润表/资产负债表/分红统一收纳）。
 
 | 字段 | 类型 | 约束 | 说明 |
 |---|---|---|---|
 | code | VARCHAR | PK 复合, NOT NULL, FK→investable_asset | 标的代码 |
 | report_date | DATE | PK 复合, NOT NULL | 报告期（分红除权日 / 财报截止日） |
-| kind | VARCHAR | PK 复合, NOT NULL, CHECK IN ('dividend','income','balance') | 数据类型 |
+| kind | VARCHAR | PK 复合, NOT NULL, CHECK IN ('dividend','snapshot','income','balance') | 数据类型 |
 | payload | JSON | NOT NULL | 该 kind 的具体字段（结构见下） |
 
 **kind 与 payload 约定**：
@@ -137,10 +137,11 @@ meta                    库级元信息（更新时间等）
 | kind | report_date 含义 | payload 结构 |
 |---|---|---|
 | dividend | 除权除息日 | `{"cash_per_share": 每10股派现金(元), "plan": "10派2.5", "record_date": "股权登记日", "ex_date": "除权日", "pay_date": "派息日"}` |
-| income | 报告期截止日 | `{"revenue": 营收, "net_profit": 净利, "roe": 净资产收益率, "eps": 每股收益, ...}` |
-| balance | 报告期截止日 | `{"assets": 总资产, "liabilities": 总负债, "equity": 净资产, ...}` |
+| snapshot | 报告期截止日 | 核心指标快照：`{"revenue": 营收, "net_profit": 净利, "roe": 净资产收益率, "eps": 每股收益, "gross_margin": 毛利率, "debt_ratio": 资产负债率}` |
+| income | 报告期截止日 | 利润表明细：`{"revenue": 营收, "operating_profit": 营业利润, "net_profit": 净利, "eps": 每股收益, "growth_yoy": 同比增速, ...}` |
+| balance | 报告期截止日 | 资产负债表详情：`{"assets": 总资产, "liabilities": 总负债, "equity": 净资产, "cash": 货币资金, ...}` |
 
-**说明**：JSON payload 的取舍——个人工具灵活性优先（新指标不加列），代价是库内不保证字段完整性，由采集脚本校验。复合主键 (code, report_date, kind) 防重复。
+**说明**：JSON payload 的取舍——个人工具灵活性优先（新指标不加列），代价是库内不保证字段完整性，由采集脚本校验，字段约定见上表（文档级强类型）。复合主键 (code, report_date, kind) 防重复。
 
 ---
 

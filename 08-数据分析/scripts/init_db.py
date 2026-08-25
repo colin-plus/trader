@@ -152,7 +152,7 @@ def main():
       PRIMARY KEY (code, date, price)
     )""")
     con.execute("""
-    CREATE TABLE IF NOT EXISTS fund_flow (
+    CREATE TABLE IF NOT EXISTS daily_capital_flow (
       code  VARCHAR REFERENCES investable_asset(code),
       date  DATE, zhuli DOUBLE, zdc DOUBLE, dd DOUBLE, zd DOUBLE, xd DOUBLE,
       pct DOUBLE, close DOUBLE, chg DOUBLE,
@@ -201,10 +201,10 @@ def main():
         # 资金流
         df = load_fund_flow(code)
         if not df.empty:
-            con.execute("DELETE FROM fund_flow WHERE code = ?", [code])
+            con.execute("DELETE FROM daily_capital_flow WHERE code = ?", [code])
             con.register("tmp_ff", df)
             con.execute(
-                "INSERT INTO fund_flow (code, date, zhuli, zdc, dd, zd, xd, pct, close, chg) "
+                "INSERT INTO daily_capital_flow (code, date, zhuli, zdc, dd, zd, xd, pct, close, chg) "
                 "SELECT code, date, zhuli, zdc, dd, zd, xd, pct, close, chg FROM tmp_ff"
             )
             print(f"✓ {name} 资金流: {len(df)} 行")

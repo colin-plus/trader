@@ -11,7 +11,7 @@ export default [
       { title: '关注标的', icon: Star, path: '/market/watchlist' },
       { title: 'K线分析', icon: ChartCandlestick, path: '/market/kline' },
       { title: '分价分布', icon: BarChart3, path: '/market/fenjia' },
-      { title: '资金流向', icon: Coins, path: '/market/fundflow' },  // 页面内 Tabs 切个股/行业板块
+      { title: '资金流向', icon: Coins, path: '/market/fundflow' },  // 页面内 Tabs 切个股/行业板块；API /api/capital-flow
       { title: '财务数据', icon: Wallet, path: '/market/finance' },
     ],
   },

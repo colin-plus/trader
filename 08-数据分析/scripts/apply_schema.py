@@ -77,8 +77,8 @@ SCHEMA = {
         "pk": ["code", "date", "price"],
         "checks": [],
     },
-    "fund_flow": {
-        "comment": "资金流向（单位：亿元，字段名沿用东财数据源缩写）",
+    "daily_capital_flow": {
+        "comment": "资金流向（日）（单位：亿元，字段名沿用东财数据源缩写）",
         "fk": "investable_asset",
         "columns": [
             ("code", "VARCHAR NOT NULL", "标的代码"),
@@ -101,11 +101,11 @@ SCHEMA = {
         "columns": [
             ("code", "VARCHAR NOT NULL", "标的代码"),
             ("report_date", "DATE NOT NULL", "报告期（除权日/财报截止日）"),
-            ("kind", "VARCHAR NOT NULL", "类型：dividend/income/balance"),
+            ("kind", "VARCHAR NOT NULL", "类型：dividend/snapshot/income/balance"),
             ("payload", "JSON NOT NULL", "该 kind 的具体字段（见 docs/schema.md）"),
         ],
         "pk": ["code", "report_date", "kind"],
-        "checks": ["kind IN ('dividend','income','balance')"],
+        "checks": ["kind IN ('dividend','snapshot','income','balance')"],
     },
     "meta": {
         "comment": "库级元信息（键值）",
@@ -125,10 +125,15 @@ TABLE_ORDER = [
     "watchlist",
     "daily_kline",
     "volume_profile",
-    "fund_flow",
+    "daily_capital_flow",
     "finance",
     "meta",
 ]
+
+# 旧表名 → 新表名映射（表重命名迁移用；None 表示同表名）
+LEGACY_MAP = {
+    "daily_capital_flow": "fund_flow",
+}
 
 
 def build_ddl(name, spec):
@@ -155,20 +160,19 @@ def main():
     tmp = pathlib.Path(tempfile.mkdtemp(prefix="schema_backup_"))
     new_db = DB_PATH.parent / "trader.duckdb.new"
     try:
-        # 1. 导出全部现有数据（从旧库只读导出，不影响任何依赖）
-        existing = [
-            t for t in TABLE_ORDER
+        # 1. 导出全部现有数据（从旧库只读导出，不影响任何依赖；支持旧表名映射）
+        for t in TABLE_ORDER:
+            src_table = LEGACY_MAP.get(t, t)
             if src_con.execute(
-                "SELECT COUNT(*) FROM information_schema.tables WHERE table_name=?", [t]
-            ).fetchone()[0] > 0
-        ]
-        for t in existing:
-            n = src_con.execute(f"SELECT COUNT(*) FROM {t}").fetchone()[0]
+                "SELECT COUNT(*) FROM information_schema.tables WHERE table_name=?", [src_table]
+            ).fetchone()[0] == 0:
+                continue
+            n = src_con.execute(f"SELECT COUNT(*) FROM {src_table}").fetchone()[0]
             if n > 0:
-                src_con.execute(f"COPY (SELECT * FROM {t}) TO '{tmp / t}.parquet' (FORMAT PARQUET)")
-                print(f"✓ 导出 {t}: {n} 行")
+                src_con.execute(f"COPY (SELECT * FROM {src_table}) TO '{tmp / t}.parquet' (FORMAT PARQUET)")
+                print(f"✓ 导出 {src_table} → {t}: {n} 行")
             else:
-                print(f"· {t}: 空表，跳过导出")
+                print(f"· {src_table}: 空表，跳过导出")
         src_con.close()
 
         # 2. 建全新库文件（blue-green 替换，规避 DuckDB 目录残留依赖问题）
