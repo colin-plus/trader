@@ -51,6 +51,8 @@ meta                    库级元信息（更新时间等）
 
 **说明**：ETF 属基金大类，当前仅跟踪 ETF 一种，故 type 用 'etf'；未来加 LOF 等可扩枚举。ETF 无 industry，可空。
 
+**数据来源**：全市场股票目录由 `scripts/seed_all_stocks.py` 从本地 market.duckdb（DBX 数据浏览器维护，`~/Github/market/data/market.duckdb`）全量导入——4593 只沪深主板+创业板（无科创板/北交所/B股），幂等可重复运行；行业取一级大类名（约 53% 覆盖，无映射留 NULL）。
+
 ---
 
 ## 表：watchlist（关注标的）

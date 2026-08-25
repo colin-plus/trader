@@ -40,6 +40,11 @@ def query_all(sql, params=None):
             if "date" in col.lower() or col in ("added_at",):
                 df[col] = df[col].where(pd.notna(df[col]), None).astype("string")
                 df[col] = df[col].map(lambda v: str(v)[:10] if v is not None and str(v) != "<NA>" else None)
-            else:
-                df[col] = df[col].where(pd.notna(df[col]), None)
-    return df.to_dict(orient="records")
+    # 纯 Python 层清洗：None/NaN/pd.NA → None
+    # （pandas 的 map/apply/where 对 str/object dtype 列的 None 填充均不可靠，dict 层清洗最稳）
+    recs = df.to_dict(orient="records")
+    for r in recs:
+        for k, v in r.items():
+            if v is None or v is pd.NA or (isinstance(v, float) and pd.isna(v)):
+                r[k] = None
+    return recs
