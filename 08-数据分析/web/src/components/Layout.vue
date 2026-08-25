@@ -47,7 +47,7 @@ function handleMenuClick(key) {
         overflow: 'hidden',
       }"
     >
-      <!-- 顶部标题：展开=[Logo+文字]，收起=[仅居中Logo] -->
+      <!-- 顶部标题：展开=[澜徽标+文字]，收起=[仅居中澜徽标] -->
       <div
         :style="{
           display: 'flex',
@@ -59,7 +59,21 @@ function handleMenuClick(key) {
           flexShrink: 0,
         }"
       >
-        <span style="font-size:20px;">📈</span>
+        <span
+          style="
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 24px;
+            height: 24px;
+            border-radius: 6px;
+            background: var(--color-primary-light-4);
+            color: var(--color-white);
+            font-size: 14px;
+            font-weight: 600;
+            flex-shrink: 0;
+          "
+        >澜</span>
         <span v-if="!collapsed" style="font-size:15px; font-weight:600; white-space:nowrap;">观澜 TideScope</span>
       </div>
 
