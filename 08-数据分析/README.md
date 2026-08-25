@@ -46,10 +46,10 @@ npm run dev        # http://localhost:5174，代理 /api 到 8000
 
 | 表 | 内容 | 来源 |
 |---|---|---|
-| instrument | 标的主数据（股票/ETF：代码/名称/类型/交易所/行业） | 手动维护 |
+| investable_asset | 标的主数据（股票/ETF：代码/名称/类型/交易所/行业） | 手动维护 |
 | watchlist | 关注标的（加入时间/备注/排序/启用） | 手动维护 |
 | daily_kline | 日线行情（开高低收/量） | 腾讯 fqkline |
-| fenjia | 分价成交量（日期+价格+手数+BS） | 东财分时聚合 |
+| price_distribution | 分价分布（日期+价格+手数+BS） | 东财分时聚合 |
 | fund_flow | 资金流向（主力/超大单/大单/中单/小单） | 东财 fflow |
 | finance | 财务数据（kind: dividend/income/balance + JSON payload） | 东财 F10 |
 | meta | 元信息（更新时间等） | 采集脚本 |
@@ -57,6 +57,6 @@ npm run dev        # http://localhost:5174，代理 /api 到 8000
 ## 数据模型约定
 
 - **主键策略**：自然键——`code` 直接做主键（A股代码全局唯一）
-- **数据表复合主键**：daily_kline/fund_flow `(code, date)`；fenjia `(code, date, price)`
-- **外键**：所有数据表 `code REFERENCES instrument(code)`
+- **数据表复合主键**：daily_kline/fund_flow `(code, date)`；price_distribution `(code, date, price)`
+- **外键**：所有数据表 `code REFERENCES investable_asset(code)`
 - **读写分离（单写者模型）**：后端 FastAPI 只读连接；写操作由采集脚本独占执行（避免争写锁）

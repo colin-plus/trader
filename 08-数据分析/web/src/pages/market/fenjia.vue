@@ -17,7 +17,7 @@ async function load() {
   loading.value = true
   error.value = ''
   try {
-    const r = await fetch(`/api/fenjia/${selected.value}?days=10`)
+    const r = await fetch(`/api/price-distribution/${selected.value}?days=10`)
     data.value = await r.json()
   } catch (e) {
     error.value = `加载失败: ${e.message}`
