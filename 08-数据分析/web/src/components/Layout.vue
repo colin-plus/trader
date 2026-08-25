@@ -117,21 +117,19 @@ function handleMenuClick(key) {
           flexShrink: 0,
         }"
       >
-        <a-tooltip :content="collapsed ? '展开侧边栏' : '收起侧边栏'" position="right">
-          <a-button
-            type="text"
-            size="mini"
-            :shape="collapsed ? 'circle' : 'round'"
-            @click="collapsed = !collapsed"
-            style="color: var(--color-text-3);"
-          >
-            <panel-left-open v-if="collapsed" :size="16" />
-            <template v-else>
-              <panel-left-close :size="16" />
-              <span style="margin-left:4px; font-size:12px;">收起侧边栏</span>
-            </template>
-          </a-button>
-        </a-tooltip>
+        <a-button
+          type="text"
+          size="mini"
+          :shape="collapsed ? 'circle' : 'round'"
+          @click="collapsed = !collapsed"
+          style="color: var(--color-text-3);"
+        >
+          <panel-left-open v-if="collapsed" :size="16" />
+          <template v-else>
+            <panel-left-close :size="16" />
+            <span style="margin-left:4px; font-size:12px;">收起侧边栏</span>
+          </template>
+        </a-button>
       </div>
     </aside>
 
