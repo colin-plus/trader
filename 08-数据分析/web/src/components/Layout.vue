@@ -91,7 +91,7 @@ function handleMenuClick(key) {
         </template>
       </a-menu>
 
-      <!-- 底部：展开=[信息+收起按钮]，收起=[居中展开按钮] -->
+      <!-- 底部：折叠按钮 -->
       <div
         :style="{
           borderTop: '1px solid var(--color-border-2)',
@@ -99,13 +99,9 @@ function handleMenuClick(key) {
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          gap: '6px',
           flexShrink: 0,
         }"
       >
-        <div v-if="!collapsed" style="font-size:11px; color:var(--color-text-4); white-space:nowrap;">
-          数据仓库 · duckdb
-        </div>
         <a-tooltip :content="collapsed ? '展开菜单' : '收起菜单'" position="right">
           <a-button
             type="text"
