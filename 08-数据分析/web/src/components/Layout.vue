@@ -85,7 +85,7 @@ function handleMenuClick(key) {
         :selected-keys="selectedKeys"
         v-model:open-keys="openKeys"
         @menu-item-click="handleMenuClick"
-        show-tooltip="false"
+        :show-tooltip="false"
       >
         <template v-for="item in menus" :key="item.path">
           <!-- 有子菜单 -->
