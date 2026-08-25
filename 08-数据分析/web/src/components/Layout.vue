@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { IconMenuFold, IconMenuUnfold } from '@arco-design/web-vue/es/icon'
+import { PanelLeftClose, PanelLeftOpen } from 'lucide-vue-next'
 import menus from '../menus.js'
 
 const route = useRoute()
@@ -75,7 +75,7 @@ function handleMenuClick(key) {
           <!-- 有子菜单 -->
           <a-sub-menu v-if="item.children" :key="item.path" :key-property="item.path">
             <template #title>
-              <span>{{ item.icon }}</span>
+              <component :is="item.icon" :size="16" style="vertical-align: middle;" />
               <span v-if="!collapsed" style="margin-left:8px;">{{ item.title }}</span>
             </template>
             <a-menu-item v-for="child in item.children" :key="child.path">
@@ -85,7 +85,7 @@ function handleMenuClick(key) {
 
           <!-- 无子菜单 -->
           <a-menu-item v-else :key="item.path">
-            <span>{{ item.icon }}</span>
+            <component :is="item.icon" :size="16" style="vertical-align: middle;" />
             <span v-if="!collapsed" style="margin-left:8px;">{{ item.title }}</span>
           </a-menu-item>
         </template>
@@ -109,8 +109,8 @@ function handleMenuClick(key) {
             shape="circle"
             @click="collapsed = !collapsed"
           >
-            <icon-menu-unfold v-if="collapsed" />
-            <icon-menu-fold v-else />
+            <panel-left-open v-if="collapsed" :size="16" />
+            <panel-left-close v-else :size="16" />
           </a-button>
         </a-tooltip>
       </div>
