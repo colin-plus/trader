@@ -39,15 +39,17 @@ function handleMenuClick(key) {
       <div style="display:flex; align-items:center; gap:8px; padding:14px 16px; border-bottom:1px solid var(--color-border-2);">
         <span style="font-size:20px;">📈</span>
         <span v-if="!collapsed" style="font-size:15px; font-weight:600; flex:1; white-space:nowrap;">Trader Data</span>
-        <a-button
-          size="mini"
-          shape="circle"
-          :style="{ border: 'none', background: 'transparent', color: 'var(--color-text-3)' }"
-          @click="collapsed = !collapsed"
-        >
-          <icon-menu-unfold v-if="collapsed" />
-          <icon-menu-fold v-else />
-        </a-button>
+        <a-tooltip :content="collapsed ? '展开菜单' : '收起菜单'" position="right">
+          <a-button
+            size="mini"
+            shape="circle"
+            @click="collapsed = !collapsed"
+            style="border: 1px solid var(--color-border-3); color: var(--color-text-2);"
+          >
+            <icon-menu-unfold v-if="collapsed" />
+            <icon-menu-fold v-else />
+          </a-button>
+        </a-tooltip>
       </div>
 
       <!-- 菜单 -->
