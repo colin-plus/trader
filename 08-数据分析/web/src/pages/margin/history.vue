@@ -1,18 +1,13 @@
 <script setup>
 import { ref, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
+import StockSearch from '../../components/StockSearch.vue'
 
 const route = useRoute()
-const stocks = ref([])
 const selected = ref('all')
 const rows = ref([])
 const loading = ref(false)
 const error = ref('')
-
-async function fetchStocks() {
-  const r = await fetch('/api/stocks')
-  stocks.value = await r.json()
-}
 
 async function load() {
   loading.value = true
@@ -28,7 +23,6 @@ async function load() {
 }
 
 onMounted(async () => {
-  await fetchStocks()
   const codeParam = route.query.code
   if (codeParam) selected.value = codeParam
   await load()
@@ -51,11 +45,7 @@ function levelColor(level) {
   <div>
     <div style="display:flex; align-items:center; gap:12px; margin-bottom:16px;">
       <h2 style="font-size:16px; margin:0;">安全边际评估历史</h2>
-      <a-select
-        v-model="selected"
-        :style="{ width: '200px' }"
-        :options="[{ label: '全部标的', value: 'all' }, ...stocks.map(s => ({ label: `${s.name}（${s.code}）`, value: s.code }))]"
-      />
+      <StockSearch v-model="selected" />
       <a-spin v-if="loading" size="small" />
       <span style="color:#f53f3f; font-size:13px;" v-if="error">{{ error }}</span>
     </div>

@@ -1,5 +1,6 @@
 <script setup>
-import { ref, computed, watch, nextTick, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import StockSearch from '../../components/StockSearch.vue'
 
 const stocks = ref([])
 const rows = ref([])
@@ -8,9 +9,6 @@ const loading = ref(false)
 const error = ref('')
 const filterCode = ref('all')
 const filterLevel = ref('all')
-const searchOptions = ref([])
-const searchLoading = ref(false)
-const query = ref('')
 
 async function load() {
   loading.value = true
@@ -43,42 +41,6 @@ async function load() {
 
 onMounted(load)
 
-// 清空输入 → 恢复全部
-watch(query, v => {
-  if (!v || v.trim() === '') {
-    filterCode.value = 'all'
-    searchOptions.value = []
-  }
-})
-
-// 选中补全项 → 过滤 + 回填"名称（代码）"
-// 注意：Arco 的 handleSelect 先 emit("select") 再 handleChange(value) 把 code 写入输入框，
-// 故用 nextTick 在组件写入后覆盖为 label 格式
-function onSelect(code) {
-  filterCode.value = code
-  const hit = searchOptions.value.find(o => o.value === code)
-  if (hit) {
-    nextTick(() => { query.value = hit.label })
-  }
-}
-
-// 远程搜索：输入代码/名称 → 后端返回前 20 条
-async function onSearch(q) {
-  if (!q || q.length < 1) {
-    searchOptions.value = []
-    return
-  }
-  searchLoading.value = true
-  try {
-    const r = await fetch(`/api/stocks/search?q=${encodeURIComponent(q)}`)
-    searchOptions.value = (await r.json()).map(x => ({ label: `${x.name}（${x.code}）`, value: x.code }))
-  } catch (e) {
-    searchOptions.value = []
-  } finally {
-    searchLoading.value = false
-  }
-}
-
 // 筛选：股票 + 结论
 const filtered = computed(() => {
   return rows.value.filter(r => {
@@ -109,15 +71,7 @@ function levelTag(pe, pb, dy) {
   <div>
     <div style="display:flex; align-items:center; gap:12px; margin-bottom:16px;">
       <h2 style="font-size:16px; margin:0;">安全边际评估看板</h2>
-      <a-auto-complete
-        v-model="query"
-        :data="searchOptions"
-        :style="{ width: '220px' }"
-        placeholder="搜索代码/名称…"
-        allow-clear
-        @search="onSearch"
-        @select="onSelect"
-      />
+      <StockSearch v-model="filterCode" />
       <a-select
         v-model="filterLevel"
         :style="{ width: '120px' }"
