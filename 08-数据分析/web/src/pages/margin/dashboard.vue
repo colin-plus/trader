@@ -76,10 +76,9 @@ function levelTag(pe, pb, dy) {
       <StockSearch v-model="filterCode" />
       <a-select
         v-model="filterLevel"
-        :style="{ width: '240px' }"
+        :style="{ width: '320px' }"
         multiple
         allow-clear
-        class="level-select"
         :options="[
           { label: '充足', value: '充足' },
           { label: '一般', value: '一般' },
@@ -142,16 +141,3 @@ function levelTag(pe, pb, dy) {
     </a-card>
   </div>
 </template>
-
-<style scoped>
-/* 结论多选标签单行显示：不换行，超宽横向滚动（标签全部可达） */
-.level-select :deep(.arco-select-view) {
-  flex-wrap: nowrap;
-  overflow-x: auto;
-  overflow-y: hidden;
-}
-.level-select :deep(.arco-select-view .arco-select-view-value) {
-  flex-wrap: nowrap;
-  white-space: nowrap;
-}
-</style>
