@@ -15,12 +15,19 @@ export default [
     path: '/market',
     children: [
       { title: '关注标的', icon: Star, path: '/market/watchlist' },
-      { title: '持仓管理', icon: Wallet, path: '/market/position' },
-      { title: '交易记录', icon: ReceiptText, path: '/market/transaction' },
       { title: 'K线分析', icon: ChartCandlestick, path: '/market/kline' },
       { title: '分价分布', icon: BarChart3, path: '/market/fenjia' },
       { title: '资金流向', icon: Coins, path: '/market/fundflow' },  // 页面内 Tabs 切个股/行业板块；API /api/capital-flow
       { title: '财务数据', icon: PiggyBank, path: '/market/finance' },
+    ],
+  },
+  {
+    title: '交易',
+    icon: Wallet,
+    path: '/trade',
+    children: [
+      { title: '持仓管理', icon: Wallet, path: '/trade/position' },
+      { title: '交易记录', icon: ReceiptText, path: '/trade/transaction' },
     ],
   },
   {

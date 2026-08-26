@@ -102,7 +102,7 @@ function color(v) {
             <template #cell="{ record }">
               <a-space>
                 <router-link class="table-link" :to="`/market/kline?code=${record.code}`">K线</router-link>
-                <router-link class="table-link" :to="`/market/transaction?code=${record.code}`">交易</router-link>
+                <router-link class="table-link" :to="`/trade/transaction?code=${record.code}`">交易</router-link>
               </a-space>
             </template>
           </a-table-column>

@@ -23,7 +23,7 @@ async function load() {
 }
 
 onMounted(async () => {
-  // 支持 URL 参数直达（如 /market/transaction?code=003043）
+  // 支持 URL 参数直达（如 /trade/transaction?code=003043）
   const codeParam = route.query.code
   if (codeParam) selected.value = codeParam
   await load()
