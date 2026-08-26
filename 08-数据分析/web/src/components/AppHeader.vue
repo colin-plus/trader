@@ -12,7 +12,7 @@ const emit = defineEmits(['toggle'])
 const route = useRoute()
 const router = useRouter()
 
-// 面包屑：首页 / 顶级组 / 当前页（随路由自动推导）
+// 面包屑：顶级组 / 当前页（随路由自动推导，无"首页"前缀）
 const crumbs = computed(() => getBreadcrumb(route.path))
 
 function go(path) {
