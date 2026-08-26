@@ -77,7 +77,6 @@ function levelTag(pe, pb, dy) {
       <a-select
         v-model="filterLevel"
         :style="{ width: '240px' }"
-        :popup-container="() => document.body"
         multiple
         allow-clear
         class="level-select"
