@@ -1,6 +1,5 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { IconQuestionCircle } from '@arco-design/web-vue/es/icon'
 import StockSearch from '../../components/StockSearch.vue'
 
 const stocks = ref([])
@@ -106,10 +105,7 @@ const levelDefs = [
       <span>10 年期国债收益率：<b style="color:var(--color-text-1);">{{ macro.cn10y }}%</b>
       （{{ macro.date }}）· 股息率安全线 ≥ {{ (macro.cn10y * 1.5).toFixed(2) }}%。</span>
       <a-popover trigger="click" position="bottom">
-        <span style="cursor:pointer; display:inline-flex; align-items:center; gap:2px;">
-          <span style="color:var(--color-link, #165dff);">查看结论定义</span>
-          <IconQuestionCircle style="font-size:14px; color:var(--color-text-3);" @click.stop />
-        </span>
+        <span style="cursor:pointer; color:var(--color-link, #165dff);">查看结论定义</span>
         <template #content>
           <div style="font-size:12px; line-height:2; color:var(--color-text-2);">
             <div style="font-weight:600; color:var(--color-text-1); margin-bottom:4px;">结论定义</div>
