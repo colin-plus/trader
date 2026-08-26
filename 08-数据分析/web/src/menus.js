@@ -1,7 +1,7 @@
 // 菜单/路由单一数据源：新增功能 = 在此加一项 + 建对应页面组件
 // title: 菜单名 | path: 路由路径 | icon: Lucide 图标组件 | children: 子菜单（可选）
 // 无 children 的顶级项 = 直接菜单项（如仪表盘 → /home）
-import { LayoutDashboard, TrendingUp, SlidersHorizontal, Star, ChartCandlestick, BarChart3, Coins, Wallet, Database, Clock, Settings, ReceiptText, PiggyBank } from 'lucide-vue-next'
+import { LayoutDashboard, TrendingUp, SlidersHorizontal, Star, ChartCandlestick, BarChart3, Coins, Wallet, Database, Clock, Settings, ReceiptText, PiggyBank, ShieldCheck, ClipboardList } from 'lucide-vue-next'
 
 export default [
   {
@@ -21,6 +21,15 @@ export default [
       { title: '分价分布', icon: BarChart3, path: '/market/fenjia' },
       { title: '资金流向', icon: Coins, path: '/market/fundflow' },  // 页面内 Tabs 切个股/行业板块；API /api/capital-flow
       { title: '财务数据', icon: PiggyBank, path: '/market/finance' },
+    ],
+  },
+  {
+    title: '安全边际',
+    icon: ShieldCheck,
+    path: '/margin',
+    children: [
+      { title: '评估看板', icon: ShieldCheck, path: '/margin/dashboard' },
+      { title: '评估历史', icon: ClipboardList, path: '/margin/history' },
     ],
   },
   {
