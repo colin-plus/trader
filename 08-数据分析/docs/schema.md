@@ -253,8 +253,6 @@ meta                    库级元信息（更新时间等）
 | pb_percentile | DOUBLE | NULL | 评估时 PB 历史分位（快照） |
 | margin_level | VARCHAR | NOT NULL, CHECK IN ('充足','一般','不足','无边际') | 安全边际结论 |
 | discount | DOUBLE | NULL | 折扣率（%） |
-| decision | VARCHAR | NULL | 决策：买入/观察/不买 |
-| note | VARCHAR | NULL | 评估理由/备注 |
 | created_at | TIMESTAMP | DEFAULT now() | 记录时间 |
 
 **说明**：字段为"评估时点快照"（价格会变，记录冻结当时数据）；100 条记录 = 100 个时点，可复盘"当时数据 vs 后来走势"。

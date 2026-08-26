@@ -197,13 +197,13 @@ def margin_evaluations(code: Optional[str] = None):
     if code:
         return db.query_all(
             "SELECT id, code, eval_date, price, pe, pb, dividend_yield, pe_percentile, "
-            "pb_percentile, margin_level, discount, decision, note "
+            "pb_percentile, margin_level, discount "
             "FROM margin_evaluation WHERE code = ? ORDER BY eval_date DESC, id DESC",
             [code],
         )
     return db.query_all(
         "SELECT id, code, eval_date, price, pe, pb, dividend_yield, pe_percentile, "
-        "pb_percentile, margin_level, discount, decision, note "
+        "pb_percentile, margin_level, discount "
         "FROM margin_evaluation ORDER BY eval_date DESC, id DESC"
     )
 
@@ -276,7 +276,7 @@ def margin_dashboard():
             FROM margin_evaluation e
         )
         SELECT r.code, a.name, r.eval_date, r.price, r.pe, r.pb, r.dividend_yield,
-               r.pe_percentile, r.pb_percentile, r.margin_level, r.decision, r.note
+               r.pe_percentile, r.pb_percentile, r.margin_level, r.discount
         FROM ranked r
         JOIN investable_asset a ON a.code = r.code
         WHERE r.rn = 1

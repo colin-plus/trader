@@ -99,8 +99,8 @@ try:
     max_id = con.execute("SELECT COALESCE(MAX(id), 0) + 1 FROM margin_evaluation").fetchone()[0]
     con.execute(
         "INSERT INTO margin_evaluation (id, code, eval_date, price, pe, pb, dividend_yield, "
-        "pe_percentile, pb_percentile, margin_level, decision, note) "
-        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL)",
+        "pe_percentile, pb_percentile, margin_level, discount) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)",
         [max_id, code, str(eval_date), price, pe, pb, dy, pe_pct, pb_pct, margin_level],
     )
     print(json.dumps({"id": max_id, "code": code, "margin_level": margin_level,

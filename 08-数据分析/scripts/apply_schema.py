@@ -150,8 +150,6 @@ SCHEMA = {
             ("pb_percentile", "DOUBLE", "评估时 PB 历史分位（快照）"),
             ("margin_level", "VARCHAR NOT NULL", "安全边际结论：充足/一般/不足/无"),
             ("discount", "DOUBLE", "折扣率（%）"),
-            ("decision", "VARCHAR", "决策：买入/观察/不买"),
-            ("note", "VARCHAR", "评估理由/备注"),
             ("created_at", "TIMESTAMP DEFAULT now()", "记录时间"),
         ],
         "pk": ["id"],

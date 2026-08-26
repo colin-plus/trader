@@ -72,10 +72,6 @@ function levelColor(level) {
               <a-tag :color="levelColor(record.margin_level)" size="small">{{ record.margin_level }}</a-tag>
             </template>
           </a-table-column>
-          <a-table-column title="决策" :width="90">
-            <template #cell="{ record }">{{ record.decision || '—' }}</template>
-          </a-table-column>
-          <a-table-column title="备注" data-index="note" />
         </template>
       </a-table>
     </a-card>

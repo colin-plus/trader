@@ -74,6 +74,30 @@ async function submitEval() {
   }
 }
 
+// 行内重新评估（直接调 POST，自动算结论落库）
+const evalLoading = ref({})
+async function reevaluate(code) {
+  evalLoading.value[code] = true
+  try {
+    const r = await fetch('/api/margin/evaluations', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code }),
+    })
+    if (!r.ok) {
+      const err = await r.json().catch(() => ({}))
+      throw new Error(err.detail || `HTTP ${r.status}`)
+    }
+    const result = await r.json()
+    await load()
+    Message.success(`重新评估成功：${result.code} 结论「${result.margin_level}」`)
+  } catch (e) {
+    Message.error(`重新评估失败：${e.message}`)
+  } finally {
+    evalLoading.value[code] = false
+  }
+}
+
 function fmt(v) {
   return v === null || v === undefined ? '—' : Number(v).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
@@ -166,13 +190,12 @@ const levelDefs = [
               <a-tag :color="levelColor(record.margin_level)" size="small">{{ record.margin_level }}</a-tag>
             </template>
           </a-table-column>
-          <a-table-column title="决策" :width="90">
-            <template #cell="{ record }">{{ record.decision || '—' }}</template>
-          </a-table-column>
-          <a-table-column title="备注" data-index="note" />
-          <a-table-column title="操作" :width="100">
+          <a-table-column title="操作" :width="160">
             <template #cell="{ record }">
-              <router-link class="table-link" :to="`/margin/history?code=${record.code}`">历史</router-link>
+              <a-space>
+                <a-button size="mini" type="primary" :loading="evalLoading[record.code]" @click="reevaluate(record.code)">重新评估</a-button>
+                <router-link class="table-link" :to="`/margin/history?code=${record.code}`">历史</router-link>
+              </a-space>
             </template>
           </a-table-column>
         </template>
