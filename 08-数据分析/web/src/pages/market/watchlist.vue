@@ -47,12 +47,12 @@ onMounted(load)
             <template #cell>—</template>
           </a-table-column>
           <a-table-column title="操作" :width="260">
-            <template #cell>
+            <template #cell="{ record }">
               <a-space>
-                <router-link class="table-link" to="/market/kline">K线</router-link>
-                <router-link class="table-link" to="/market/fenjia">分价</router-link>
-                <router-link class="table-link" to="/market/fundflow">资金流</router-link>
-                <router-link class="table-link" to="/market/finance">财务</router-link>
+                <router-link class="table-link" :to="`/market/kline?code=${record.code}`">K线</router-link>
+                <router-link class="table-link" :to="`/market/fenjia?code=${record.code}`">分价</router-link>
+                <router-link class="table-link" :to="`/market/fundflow?code=${record.code}`">资金流</router-link>
+                <router-link class="table-link" :to="`/market/finance?code=${record.code}`">财务</router-link>
               </a-space>
             </template>
           </a-table-column>

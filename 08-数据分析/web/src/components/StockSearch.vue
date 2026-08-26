@@ -3,7 +3,7 @@
 // 用法：<StockSearch v-model="selectedCode" />
 //  - v-model: 选中的 code（清空时置 'all'）
 //  - 选中后回填"名称（代码）"格式，并 emit 'select'（可选监听）
-import { ref, watch, nextTick } from 'vue'
+import { ref, watch, nextTick, onMounted } from 'vue'
 
 const props = defineProps({
   modelValue: { type: String, default: 'all' },
@@ -15,6 +15,27 @@ const emit = defineEmits(['update:modelValue', 'select'])
 const query = ref('')
 const searchOptions = ref([])
 const searchLoading = ref(false)
+
+// 反查名称：code → "名称（代码）"（用于外部设置/URL 直达时回填输入框）
+async function backfill(code) {
+  if (!code || code === 'all') return
+  try {
+    const r = await fetch(`/api/stocks/search?q=${encodeURIComponent(code)}`)
+    const hits = await r.json()
+    const hit = hits.find(x => x.code === code)
+    if (hit) query.value = `${hit.name}（${hit.code}）`
+  } catch (e) { /* 静默 */ }
+}
+
+// 外部值变化（URL 直达/父组件设置）→ 回填输入框
+watch(() => props.modelValue, v => {
+  if (v === 'all' || v === undefined || v === null || v === '') {
+    query.value = ''
+  } else {
+    backfill(v)
+  }
+})
+onMounted(() => backfill(props.modelValue))
 
 // 远程搜索：输入代码/名称 → 后端返回前 20 条
 async function onSearch(q) {

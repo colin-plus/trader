@@ -1,16 +1,21 @@
 <script setup>
 import { ref, onMounted, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import FundFlowChart from '../../components/FundFlowChart.vue'
 import StockSearch from '../../components/StockSearch.vue'
 
+const route = useRoute()
 const tab = ref('stock')
-const selected = ref('003043')
+const selected = ref('all')  // 默认空白，选择后才加载
 const data = ref(null)
 const loading = ref(false)
 const error = ref('')
 
 async function load() {
-  if (selected.value === 'all') return
+  if (selected.value === 'all') {
+    data.value = null
+    return
+  }
   loading.value = true
   error.value = ''
   try {
@@ -23,8 +28,13 @@ async function load() {
   }
 }
 
+onMounted(async () => {
+  const codeParam = route.query.code
+  if (codeParam) selected.value = codeParam
+  await load()
+})
+
 watch(selected, load)
-onMounted(load)
 </script>
 
 <template>
@@ -47,6 +57,7 @@ onMounted(load)
       <a-card v-if="data" :bordered="true" style="border-radius:8px;">
         <FundFlowChart :data="data.rows" />
       </a-card>
+      <a-empty v-else-if="!loading" description="请搜索并选择标的" style="margin-top:40px;" />
     </template>
 
     <!-- 行业板块资金流（待开发） -->
