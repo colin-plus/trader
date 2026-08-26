@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, nextTick, onMounted } from 'vue'
 
 const stocks = ref([])
 const rows = ref([])
@@ -51,9 +51,15 @@ watch(query, v => {
   }
 })
 
-// 选中补全项 → 过滤
+// 选中补全项 → 过滤 + 回填"名称（代码）"
+// 注意：Arco 的 handleSelect 先 emit("select") 再 handleChange(value) 把 code 写入输入框，
+// 故用 nextTick 在组件写入后覆盖为 label 格式
 function onSelect(code) {
   filterCode.value = code
+  const hit = searchOptions.value.find(o => o.value === code)
+  if (hit) {
+    nextTick(() => { query.value = hit.label })
+  }
 }
 
 // 远程搜索：输入代码/名称 → 后端返回前 20 条
