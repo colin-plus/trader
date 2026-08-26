@@ -1,7 +1,10 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { Message } from '@arco-design/web-vue'
 import StockSearch from '../../components/StockSearch.vue'
+
+const router = useRouter()
 
 const rows = ref([])
 const macro = ref(null)
@@ -193,8 +196,8 @@ const levelDefs = [
           <a-table-column title="操作" :width="160">
             <template #cell="{ record }">
               <a-space>
-                <a-button size="mini" type="primary" :loading="evalLoading[record.code]" @click="reevaluate(record.code)">重新评估</a-button>
-                <router-link class="table-link" :to="`/margin/history?code=${record.code}`">历史</router-link>
+                <a-button size="mini" type="link" :loading="evalLoading[record.code]" @click="reevaluate(record.code)">重新评估</a-button>
+                <a-button size="mini" type="link" @click="router.push(`/margin/history?code=${record.code}`)">历史</a-button>
               </a-space>
             </template>
           </a-table-column>
