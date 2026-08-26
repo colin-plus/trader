@@ -1,5 +1,6 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { IconQuestionCircle } from '@arco-design/web-vue/es/icon'
 import StockSearch from '../../components/StockSearch.vue'
 
 const stocks = ref([])
@@ -99,19 +100,26 @@ const levelDefs = [
       <span style="color:#f53f3f; font-size:13px;" v-if="error">{{ error }}</span>
     </div>
 
-    <!-- 宏观基准 -->
-    <div v-if="macro" style="margin-bottom:8px; font-size:13px; color:var(--color-text-3);">
-      10 年期国债收益率：<b style="color:var(--color-text-1);">{{ macro.cn10y }}%</b>
-      （{{ macro.date }}）· 股息率安全线 ≥ {{ (macro.cn10y * 1.5).toFixed(2) }}%
-    </div>
-
-    <!-- 结论定义说明 -->
-    <div style="display:flex; align-items:center; gap:16px; flex-wrap:wrap; margin-bottom:16px; font-size:12px; color:var(--color-text-3);">
-      <span style="color:var(--color-text-3); flex-shrink:0;">结论定义：</span>
-      <a-space v-for="d in levelDefs" :key="d.level" size="small" style="flex-shrink:0;">
-        <a-tag :color="d.color" size="small">{{ d.level }}</a-tag>
-        <span>{{ d.desc }}</span>
-      </a-space>
+    <!-- 宏观基准 + 结论定义问号 -->
+    <div v-if="macro" style="display:flex; align-items:center; gap:8px; margin-bottom:16px; font-size:13px; color:var(--color-text-3);">
+      <span>10 年期国债收益率：<b style="color:var(--color-text-1);">{{ macro.cn10y }}%</b>
+      （{{ macro.date }}）· 股息率安全线 ≥ {{ (macro.cn10y * 1.5).toFixed(2) }}%</span>
+      <a-popover trigger="click" position="bottom">
+        <IconQuestionCircle
+          style="cursor:pointer; font-size:14px; color:var(--color-text-3);"
+          @click.stop
+        />
+        <template #content>
+          <div style="font-size:12px; line-height:2; color:var(--color-text-2);">
+            <div style="font-weight:600; color:var(--color-text-1); margin-bottom:4px;">结论定义</div>
+            <ul style="margin:0; padding-left:16px;">
+              <li v-for="d in levelDefs" :key="d.level">
+                <a-tag :color="d.color" size="small" style="margin-right:6px;">{{ d.level }}</a-tag>{{ d.desc }}
+              </li>
+            </ul>
+          </div>
+        </template>
+      </a-popover>
     </div>
 
     <a-card :bordered="true" style="border-radius:8px;">
