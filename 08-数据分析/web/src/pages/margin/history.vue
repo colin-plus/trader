@@ -53,21 +53,34 @@ function levelColor(level) {
     <a-card :bordered="true" style="border-radius:8px;">
       <a-table :data="rows.map((r, i) => ({ key: i, ...r }))" :pagination="false" :bordered="true" size="small" :scroll="{ x: 'max-content' }">
         <template #columns>
-          <a-table-column title="日期" data-index="eval_date" :width="120" />
+          <a-table-column title="评估日期" data-index="eval_date" :width="120" />
           <a-table-column title="代码" data-index="code" :width="100" />
+          <a-table-column title="名称" data-index="name" />
           <a-table-column title="价格" :width="90" align="right">
             <template #cell="{ record }">{{ fmt(record.price) }}</template>
           </a-table-column>
-          <a-table-column title="PE" :width="80" align="right">
+          <a-table-column title="PE" :width="90" align="right">
             <template #cell="{ record }">{{ fmt(record.pe) }}</template>
           </a-table-column>
-          <a-table-column title="PB" :width="80" align="right">
+          <a-table-column title="PE分位" :width="90" align="right">
+            <template #cell="{ record }">
+              <span :style="{ color: record.pe_percentile !== null && record.pe_percentile <= 30 ? '#00b42a' : 'inherit' }">{{ fmtPct(record.pe_percentile) }}</span>
+            </template>
+          </a-table-column>
+          <a-table-column title="PB" :width="90" align="right">
             <template #cell="{ record }">{{ fmt(record.pb) }}</template>
           </a-table-column>
-          <a-table-column title="股息率" :width="90" align="right">
-            <template #cell="{ record }">{{ fmtPct(record.dividend_yield) }}</template>
+          <a-table-column title="PB分位" :width="90" align="right">
+            <template #cell="{ record }">
+              <span :style="{ color: record.pb_percentile !== null && record.pb_percentile <= 30 ? '#00b42a' : 'inherit' }">{{ fmtPct(record.pb_percentile) }}</span>
+            </template>
           </a-table-column>
-          <a-table-column title="结论" :width="80" align="center">
+          <a-table-column title="股息率" :width="90" align="right">
+            <template #cell="{ record }">
+              <span :style="{ color: record.dividend_yield >= 3 ? '#00b42a' : 'inherit' }">{{ fmtPct(record.dividend_yield) }}</span>
+            </template>
+          </a-table-column>
+          <a-table-column title="结论" :width="90" align="center">
             <template #cell="{ record }">
               <a-tag :color="levelColor(record.margin_level)" size="small">{{ record.margin_level }}</a-tag>
             </template>

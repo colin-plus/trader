@@ -1,10 +1,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
 import { Message } from '@arco-design/web-vue'
 import StockSearch from '../../components/StockSearch.vue'
-
-const router = useRouter()
 
 const rows = ref([])
 const macro = ref(null)
@@ -166,9 +163,9 @@ const levelDefs = [
     <a-card :bordered="true" style="border-radius:8px;">
       <a-table :data="filtered" :pagination="false" :bordered="true" size="small" :scroll="{ x: 'max-content' }">
         <template #columns>
+          <a-table-column title="评估日期" data-index="eval_date" :width="120" />
           <a-table-column title="代码" data-index="code" :width="100" />
           <a-table-column title="名称" data-index="name" />
-          <a-table-column title="评估日期" data-index="eval_date" :width="120" />
           <a-table-column title="价格" :width="90" align="right">
             <template #cell="{ record }">{{ fmt(record.price) }}</template>
           </a-table-column>
@@ -183,6 +180,11 @@ const levelDefs = [
           <a-table-column title="PB" :width="90" align="right">
             <template #cell="{ record }">{{ fmt(record.pb) }}</template>
           </a-table-column>
+          <a-table-column title="PB分位" :width="90" align="right">
+            <template #cell="{ record }">
+              <span :style="{ color: record.pb_percentile !== null && record.pb_percentile <= 30 ? '#00b42a' : 'inherit' }">{{ fmtPct(record.pb_percentile) }}</span>
+            </template>
+          </a-table-column>
           <a-table-column title="股息率" :width="90" align="right">
             <template #cell="{ record }">
               <span :style="{ color: record.dividend_yield >= 3 ? '#00b42a' : 'inherit' }">{{ fmtPct(record.dividend_yield) }}</span>
@@ -193,11 +195,11 @@ const levelDefs = [
               <a-tag :color="levelColor(record.margin_level)" size="small">{{ record.margin_level }}</a-tag>
             </template>
           </a-table-column>
-          <a-table-column title="操作" :width="160">
+          <a-table-column title="操作" :width="130">
             <template #cell="{ record }">
               <a-space>
-                <a-button size="mini" type="link" :loading="evalLoading[record.code]" @click="reevaluate(record.code)">重新评估</a-button>
-                <a-button size="mini" type="link" @click="router.push(`/margin/history?code=${record.code}`)">历史</a-button>
+                <a class="table-link" style="cursor:pointer;" :style="{ opacity: evalLoading[record.code] ? 0.6 : 1 }" @click="reevaluate(record.code)">重新评估</a>
+                <router-link class="table-link" :to="`/margin/history?code=${record.code}`">历史</router-link>
               </a-space>
             </template>
           </a-table-column>

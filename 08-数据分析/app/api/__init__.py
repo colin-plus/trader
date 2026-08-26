@@ -196,15 +196,17 @@ def margin_evaluations(code: Optional[str] = None):
     """安全边际评估记录（可按标的过滤）"""
     if code:
         return db.query_all(
-            "SELECT id, code, eval_date, price, pe, pb, dividend_yield, pe_percentile, "
-            "pb_percentile, margin_level, discount "
-            "FROM margin_evaluation WHERE code = ? ORDER BY eval_date DESC, id DESC",
+            "SELECT e.id, e.code, a.name, e.eval_date, e.price, e.pe, e.pb, e.dividend_yield, "
+            "e.pe_percentile, e.pb_percentile, e.margin_level, e.discount "
+            "FROM margin_evaluation e JOIN investable_asset a ON a.code = e.code "
+            "WHERE e.code = ? ORDER BY e.eval_date DESC, e.id DESC",
             [code],
         )
     return db.query_all(
-        "SELECT id, code, eval_date, price, pe, pb, dividend_yield, pe_percentile, "
-        "pb_percentile, margin_level, discount "
-        "FROM margin_evaluation ORDER BY eval_date DESC, id DESC"
+        "SELECT e.id, e.code, a.name, e.eval_date, e.price, e.pe, e.pb, e.dividend_yield, "
+        "e.pe_percentile, e.pb_percentile, e.margin_level, e.discount "
+        "FROM margin_evaluation e JOIN investable_asset a ON a.code = e.code "
+        "ORDER BY e.eval_date DESC, e.id DESC"
     )
 
 
