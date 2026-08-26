@@ -61,12 +61,7 @@ function makeRoute(path, title) {
 
 const routes = buildRoutes(menus)
 
-// 首页：不在侧边菜单（面包屑第一项入口），单独注册
-routes.push({
-  path: '/home',
-  meta: { title: '首页' },
-  component: () => import('./pages/home.vue'),
-})
+// 根路径与 404 兜底
 routes.push({ path: '/', redirect: '/home' })
 routes.push({ path: '/:pathMatch(.*)*', redirect: '/home' })
 

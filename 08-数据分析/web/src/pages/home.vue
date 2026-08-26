@@ -7,13 +7,14 @@ const router = useRouter()
 
 // 快捷入口：从 menus.js 展平叶子菜单（单一数据源，新增页面自动出现）
 // 图标显式映射：menus 里只有叶子项有 icon，这里直接用
+// 过滤仪表盘（/home 自身，避免自引用卡片）
 const entries = []
 for (const group of menus) {
   if (group.children) {
     for (const child of group.children) {
       entries.push({ title: child.title, path: child.path, icon: child.icon })
     }
-  } else {
+  } else if (group.path !== '/home') {
     entries.push({ title: group.title, path: group.path, icon: group.icon })
   }
 }

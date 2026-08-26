@@ -1,8 +1,14 @@
 // 菜单/路由单一数据源：新增功能 = 在此加一项 + 建对应页面组件
 // title: 菜单名 | path: 路由路径 | icon: Lucide 图标组件 | children: 子菜单（可选）
-import { TrendingUp, SlidersHorizontal, Star, ChartCandlestick, BarChart3, Coins, Wallet, Database, Clock, Settings, ReceiptText, PiggyBank } from 'lucide-vue-next'
+// 无 children 的顶级项 = 直接菜单项（如仪表盘 → /home）
+import { LayoutDashboard, TrendingUp, SlidersHorizontal, Star, ChartCandlestick, BarChart3, Coins, Wallet, Database, Clock, Settings, ReceiptText, PiggyBank } from 'lucide-vue-next'
 
 export default [
+  {
+    title: '仪表盘',
+    icon: LayoutDashboard,
+    path: '/home',
+  },
   {
     title: '行情分析',
     icon: TrendingUp,
