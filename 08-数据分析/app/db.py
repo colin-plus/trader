@@ -23,11 +23,15 @@ def get_conn(read_only=True):
 
 
 def query_all(sql, params=None):
-    """执行查询并返回 dict 列表（连接用完即关，释放文件锁）"""
+    """执行查询并返回 dict 列表（连接用完即关，释放文件锁）
+
+    用 duckdb 原生 fetchall + 列名映射（不用 pandas：其 NaN 转 JSON 会崩）。
+    """
     con = duckdb.connect(str(DB_PATH), read_only=True)
     try:
-        df = con.execute(sql, params or []).fetchdf()
-        return df.to_dict("records")
+        cur = con.execute(sql, params or [])
+        cols = [d[0] for d in cur.description]
+        return [dict(zip(cols, row)) for row in cur.fetchall()]
     finally:
         con.close()
 
