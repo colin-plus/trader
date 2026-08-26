@@ -149,7 +149,7 @@ const levelDefs = [
         <template #columns>
           <a-table-column title="代码" data-index="code" :width="100" />
           <a-table-column title="名称" data-index="name" />
-          <a-table-column title="评估日期" data-index="eval_date" :width="110" />
+          <a-table-column title="评估日期" data-index="eval_date" :width="120" />
           <a-table-column title="价格" :width="90" align="right">
             <template #cell="{ record }">{{ fmt(record.price) }}</template>
           </a-table-column>
