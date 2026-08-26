@@ -56,10 +56,10 @@ function fmt(v) {
     </div>
 
     <a-card :bordered="true" style="border-radius:8px;">
-      <a-table :data="rows.map((r, i) => ({ key: i, ...r }))" :pagination="false" :bordered="true" size="small">
+      <a-table :data="rows.map((r, i) => ({ key: i, ...r }))" :pagination="false" :bordered="true" size="small" :scroll="{ x: 'max-content' }">
         <template #columns>
-          <a-table-column title="日期" data-index="trade_date" :width="110" />
-          <a-table-column title="代码" data-index="code" :width="90" />
+          <a-table-column title="日期" data-index="trade_date" :width="120" />
+          <a-table-column title="代码" data-index="code" :width="100" />
           <a-table-column title="名称" data-index="name" />
           <a-table-column title="方向" :width="70">
             <template #cell="{ record }">

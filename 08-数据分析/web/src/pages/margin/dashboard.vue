@@ -70,9 +70,9 @@ function levelTag(pe, pb, dy) {
     </div>
 
     <a-card :bordered="true" style="border-radius:8px;">
-      <a-table :data="rows" :pagination="false" :bordered="true" size="small">
+      <a-table :data="rows" :pagination="false" :bordered="true" size="small" :scroll="{ x: 'max-content' }">
         <template #columns>
-          <a-table-column title="代码" data-index="code" :width="80" />
+          <a-table-column title="代码" data-index="code" :width="100" />
           <a-table-column title="名称" data-index="name" />
           <a-table-column title="现价" :width="90" align="right">
             <template #cell="{ record }">{{ fmt(record.close) }}</template>

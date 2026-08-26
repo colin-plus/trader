@@ -35,6 +35,7 @@ onMounted(load)
         :pagination="false"
         :bordered="true"
         size="small"
+        :scroll="{ x: 'max-content' }"
       >
         <template #columns>
           <a-table-column title="代码" data-index="code" :width="100" />
