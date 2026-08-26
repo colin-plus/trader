@@ -37,7 +37,7 @@ function fmtPct(v) {
   return v === null || v === undefined ? '—' : `${Number(v).toFixed(2)}%`
 }
 function levelColor(level) {
-  return { '充足': 'green', '一般': 'orange', '不足': 'red', '无': 'gray' }[level] || 'gray'
+  return { '充足': 'green', '一般': 'orange', '不足': 'red', '无边际': 'gray' }[level] || 'gray'
 }
 </script>
 

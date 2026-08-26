@@ -251,7 +251,7 @@ meta                    库级元信息（更新时间等）
 | dividend_yield | DOUBLE | NULL | 评估时股息率（快照） |
 | pe_percentile | DOUBLE | NULL | 评估时 PE 历史分位（快照） |
 | pb_percentile | DOUBLE | NULL | 评估时 PB 历史分位（快照） |
-| margin_level | VARCHAR | NOT NULL, CHECK IN ('充足','一般','不足','无') | 安全边际结论 |
+| margin_level | VARCHAR | NOT NULL, CHECK IN ('充足','一般','不足','无边际') | 安全边际结论 |
 | discount | DOUBLE | NULL | 折扣率（%） |
 | decision | VARCHAR | NULL | 决策：买入/观察/不买 |
 | note | VARCHAR | NULL | 评估理由/备注 |

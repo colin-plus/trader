@@ -35,7 +35,7 @@ def evaluate(code: str, latest: dict, pct: dict, price: float) -> dict:
     elif lights == 1:
         level = "一般"
     elif pe is not None and pe > 30:
-        level = "无"
+        level = "无边际"
     else:
         level = "不足"
     return {

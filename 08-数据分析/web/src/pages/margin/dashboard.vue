@@ -65,8 +65,16 @@ function levelTag(pe, pb, dy) {
   const c = pb !== null && pb <= 1.5
   if (a && c) return { text: '充足', color: 'green' }
   if (a || c) return { text: '一般', color: 'orange' }
-  return { text: '无', color: 'red' }
+  return { text: '无边际', color: 'red' }
 }
+
+// 结论定义说明（页面展示用）
+const levelDefs = [
+  { level: '充足', color: 'green', desc: '股息率 ≥3% 且 PB ≤1.5，两把尺子都亮——有充分价值垫' },
+  { level: '一般', color: 'orange', desc: '股息率 ≥3% 或 PB ≤1.5，亮一把——价值垫有限' },
+  { level: '不足', color: 'red', desc: '两把尺子都不亮，但估值不算夸张——不便宜但可评估' },
+  { level: '无边际', color: 'gray', desc: '两把尺子都不亮且高 PE（>30）——无价值垫，不属于安全边际投资（≠不能买）' },
+]
 </script>
 
 <template>
@@ -83,7 +91,7 @@ function levelTag(pe, pb, dy) {
           { label: '充足', value: '充足' },
           { label: '一般', value: '一般' },
           { label: '不足', value: '不足' },
-          { label: '无', value: '无' },
+          { label: '无边际', value: '无边际' },
         ]"
         placeholder="结论筛选（多选）"
       />
@@ -92,9 +100,18 @@ function levelTag(pe, pb, dy) {
     </div>
 
     <!-- 宏观基准 -->
-    <div v-if="macro" style="margin-bottom:16px; font-size:13px; color:var(--color-text-3);">
+    <div v-if="macro" style="margin-bottom:8px; font-size:13px; color:var(--color-text-3);">
       10 年期国债收益率：<b style="color:var(--color-text-1);">{{ macro.cn10y }}%</b>
       （{{ macro.date }}）· 股息率安全线 ≥ {{ (macro.cn10y * 1.5).toFixed(2) }}%
+    </div>
+
+    <!-- 结论定义说明 -->
+    <div style="display:flex; align-items:center; gap:16px; flex-wrap:wrap; margin-bottom:16px; font-size:12px; color:var(--color-text-3);">
+      <span style="color:var(--color-text-3); flex-shrink:0;">结论定义：</span>
+      <a-space v-for="d in levelDefs" :key="d.level" size="small" style="flex-shrink:0;">
+        <a-tag :color="d.color" size="small">{{ d.level }}</a-tag>
+        <span>{{ d.desc }}</span>
+      </a-space>
     </div>
 
     <a-card :bordered="true" style="border-radius:8px;">

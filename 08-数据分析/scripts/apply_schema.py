@@ -155,7 +155,7 @@ SCHEMA = {
             ("created_at", "TIMESTAMP DEFAULT now()", "记录时间"),
         ],
         "pk": ["id"],
-        "checks": ["margin_level IN ('充足','一般','不足','无')"],
+        "checks": ["margin_level IN ('充足','一般','不足','无边际')"],
     },
     "margin_macro": {
         "comment": "宏观基准（全市场共用）：10年期国债收益率等无风险利率",
