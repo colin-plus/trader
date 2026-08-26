@@ -8,7 +8,7 @@ const macro = ref(null)
 const loading = ref(false)
 const error = ref('')
 const filterCode = ref('all')
-const filterLevel = ref('all')
+const filterLevel = ref([])  // 多选，空数组 = 全部结论
 
 async function load() {
   loading.value = true
@@ -42,11 +42,12 @@ async function load() {
 
 onMounted(load)
 
-// 筛选：股票 + 结论
+// 筛选：股票 + 结论（多选，空数组 = 全部）
 const filtered = computed(() => {
   return rows.value.filter(r => {
     const codeOk = filterCode.value === 'all' || r.code === filterCode.value
-    const levelOk = filterLevel.value === 'all' || levelTag(r.pe, r.pb, r.dividend_yield).text === filterLevel.value
+    const level = levelTag(r.pe, r.pb, r.dividend_yield).text
+    const levelOk = filterLevel.value.length === 0 || filterLevel.value.includes(level)
     return codeOk && levelOk
   })
 })
@@ -75,15 +76,16 @@ function levelTag(pe, pb, dy) {
       <StockSearch v-model="filterCode" />
       <a-select
         v-model="filterLevel"
-        :style="{ width: '120px' }"
+        :style="{ width: '180px' }"
+        multiple
+        allow-clear
         :options="[
-          { label: '全部结论', value: 'all' },
           { label: '充足', value: '充足' },
           { label: '一般', value: '一般' },
           { label: '不足', value: '不足' },
           { label: '无', value: '无' },
         ]"
-        placeholder="全部结论"
+        placeholder="结论筛选（多选）"
       />
       <a-spin v-if="loading" size="small" />
       <span style="color:#f53f3f; font-size:13px;" v-if="error">{{ error }}</span>
