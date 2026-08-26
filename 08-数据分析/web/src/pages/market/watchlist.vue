@@ -48,10 +48,10 @@ onMounted(load)
           <a-table-column title="操作" :width="260">
             <template #cell>
               <a-space>
-                <router-link to="/market/kline">K线</router-link>
-                <router-link to="/market/fenjia">分价</router-link>
-                <router-link to="/market/fundflow">资金流</router-link>
-                <router-link to="/market/finance">财务</router-link>
+                <router-link class="table-link" to="/market/kline">K线</router-link>
+                <router-link class="table-link" to="/market/fenjia">分价</router-link>
+                <router-link class="table-link" to="/market/fundflow">资金流</router-link>
+                <router-link class="table-link" to="/market/finance">财务</router-link>
               </a-space>
             </template>
           </a-table-column>

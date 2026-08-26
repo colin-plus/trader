@@ -12,3 +12,14 @@ body {
 }
 
 .muted { color: #86909c; font-size: 12px; }
+
+/* 表格操作链接：主题色 + hover 下划线，与普通文字明确区分 */
+a.table-link {
+  color: var(--color-primary-light-4);
+  text-decoration: none;
+  cursor: pointer;
+}
+a.table-link:hover {
+  color: var(--color-primary-6);
+  text-decoration: underline;
+}
