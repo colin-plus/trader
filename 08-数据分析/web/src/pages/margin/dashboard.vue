@@ -61,12 +61,13 @@ function fmtPct(v) {
 }
 function levelTag(pe, pb, dy) {
   // 与 eval_margin.py 同规则：股息≥3% + PB≤1.5 或分位≤30%
+  // 颜色与 levelDefs / history.vue 统一：充足green 一般orange 不足red 无边际gray
   if (pe === null || pe === undefined) return { text: '—', color: 'gray' }
   const a = dy >= 3
   const c = pb !== null && pb <= 1.5
   if (a && c) return { text: '充足', color: 'green' }
   if (a || c) return { text: '一般', color: 'orange' }
-  return { text: '无边际', color: 'red' }
+  return { text: '无边际', color: 'gray' }
 }
 
 // 结论定义说明（页面展示用）
