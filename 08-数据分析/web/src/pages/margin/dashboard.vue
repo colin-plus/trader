@@ -1,3 +1,106 @@
+<script setup>
+import { ref, computed, onMounted } from 'vue'
+import StockSearch from '../../components/StockSearch.vue'
+
+const rows = ref([])
+const macro = ref(null)
+const loading = ref(false)
+const error = ref('')
+const filterCode = ref('all')
+const filterLevel = ref([])  // 多选，空数组 = 全部结论
+
+// 新增评估弹窗
+const modalVisible = ref(false)
+const modalLoading = ref(false)
+const modalError = ref('')
+const evalCode = ref('all')
+const evalLevel = ref('充足')
+const evalDecision = ref('')
+const evalNote = ref('')
+
+async function load() {
+  loading.value = true
+  error.value = ''
+  try {
+    const [d, m] = await Promise.all([
+      fetch('/api/margin/dashboard').then(r => r.json()),
+      fetch('/api/margin/macro').then(r => r.json()),
+    ])
+    rows.value = d.map((r, i) => ({ key: i, ...r }))
+    macro.value = m[0] || null
+  } catch (e) {
+    error.value = `加载失败: ${e.message}`
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(load)
+
+// 筛选：股票 + 结论（多选，空数组 = 全部）
+const filtered = computed(() => {
+  return rows.value.filter(r => {
+    const codeOk = filterCode.value === 'all' || r.code === filterCode.value
+    const levelOk = filterLevel.value.length === 0 || filterLevel.value.includes(r.margin_level)
+    return codeOk && levelOk
+  })
+})
+
+// 新增评估提交
+async function submitEval() {
+  if (evalCode.value === 'all') {
+    modalError.value = '请选择标的'
+    return
+  }
+  modalLoading.value = true
+  modalError.value = ''
+  try {
+    const r = await fetch('/api/margin/evaluations', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        code: evalCode.value,
+        margin_level: evalLevel.value,
+        decision: evalDecision.value || null,
+        note: evalNote.value || null,
+      }),
+    })
+    if (!r.ok) {
+      const err = await r.json().catch(() => ({}))
+      throw new Error(err.detail || `HTTP ${r.status}`)
+    }
+    modalVisible.value = false
+    evalCode.value = 'all'
+    evalLevel.value = '充足'
+    evalDecision.value = ''
+    evalNote.value = ''
+    await load()
+  } catch (e) {
+    modalError.value = `评估失败: ${e.message}`
+  } finally {
+    modalLoading.value = false
+  }
+}
+
+function fmt(v) {
+  return v === null || v === undefined ? '—' : Number(v).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
+function fmtPct(v) {
+  return v === null || v === undefined ? '—' : `${Number(v).toFixed(1)}%`
+}
+function levelColor(level) {
+  return { '充足': 'green', '一般': 'orange', '不足': 'red', '无边际': 'gray' }[level] || 'gray'
+}
+
+// 结论定义说明（页面展示用）
+const levelDefs = [
+  { level: '充足', color: 'green', desc: '股息率 ≥3% 且 PB ≤1.5，两把尺子都亮——有充分价值垫' },
+  { level: '一般', color: 'orange', desc: '股息率 ≥3% 或 PB ≤1.5，亮一把——价值垫有限' },
+  { level: '不足', color: 'red', desc: '两把尺子都不亮，但估值不算夸张——不便宜但可评估' },
+  { level: '无边际', color: 'gray', desc: '两把尺子都不亮且高 PE（>30）——无价值垫，不属于安全边际投资（≠不能买）' },
+]
+</script>
+
 <template>
   <div>
     <div style="display:flex; align-items:center; gap:12px; margin-bottom:16px;">

@@ -1,56 +1,41 @@
 """duckdb 连接与查询封装。
 
-单写者模型（事务级单写）：
-- 后端连接用只读模式（查询/展示）——实测只读连接不阻塞其他进程写
-- 写操作（采集脚本、评估落库）走独立进程——与只读后端共存无锁冲突
-- 线程模型：duckdb 连接不可跨线程共享，threading.local 每线程一个连接
+单写者模型（DuckDB 无 WAL，文件级锁）：
+- DuckDB 1.5.5 无 WAL：查询过的只读连接持有读快照会锁文件，阻塞其他进程写
+- 故后端不缓存连接：每次查询临时开/关只读连接（锁短暂存在）
+- 写操作（采集脚本、评估落库）走独立进程——后端查询间隙可写入
+- 线程安全：连接不跨线程共享（每次新建）
 
-注意：不要用可写连接常驻——可写连接持有单写者锁，
-会阻塞其他进程写（含采集脚本），实测报 Conflicting lock。
+注意：不要缓存连接（threading.local 也不行）——任何查询过的常驻连接
+都会永久锁文件，导致评估/采集写进程报 Conflicting lock。
 """
 import pathlib
-import threading
 
 import duckdb
 import pandas as pd
 
 DB_PATH = pathlib.Path(__file__).parent.parent / "data" / "trader.duckdb"
 
-_local = threading.local()
 
-
-def get_conn():
-    """当前线程的只读连接（每线程一个，线程安全）"""
-    conn = getattr(_local, "conn", None)
-    if conn is None:
-        conn = duckdb.connect(str(DB_PATH), read_only=True)
-        _local.conn = conn
-    return conn
-
-
-def query_df(sql, params=None):
-    """执行查询返回 pandas DataFrame"""
-    con = get_conn()
-    if params:
-        df = con.execute(sql, params).fetchdf()
-    else:
-        df = con.execute(sql).fetchdf()
-    return df if df is not None else pd.DataFrame()
+def get_conn(read_only=True):
+    """临时连接（用完必须 close 释放锁）。查询/写都短暂持有。"""
+    return duckdb.connect(str(DB_PATH), read_only=read_only)
 
 
 def query_all(sql, params=None):
-    """执行查询返回 dict 列表（date 字段转为 YYYY-MM-DD 字符串，NaT/NaN → None）"""
-    df = query_df(sql, params)
-    if not df.empty:
-        for col in df.columns:
-            if "date" in col.lower() or col in ("added_at",):
-                df[col] = df[col].where(pd.notna(df[col]), None).astype("string")
-                df[col] = df[col].map(lambda v: str(v)[:10] if v is not None and str(v) != "<NA>" else None)
-    # 纯 Python 层清洗：None/NaN/pd.NA → None
-    # （pandas 的 map/apply/where 对 str/object dtype 列的 None 填充均不可靠，dict 层清洗最稳）
-    recs = df.to_dict(orient="records")
-    for r in recs:
-        for k, v in r.items():
-            if v is None or v is pd.NA or (isinstance(v, float) and pd.isna(v)):
-                r[k] = None
-    return recs
+    """执行查询并返回 dict 列表（连接用完即关，释放文件锁）"""
+    con = duckdb.connect(str(DB_PATH), read_only=True)
+    try:
+        df = con.execute(sql, params or []).fetchdf()
+        return df.to_dict("records")
+    finally:
+        con.close()
+
+
+def query_df(sql, params=None):
+    """执行查询并返回 DataFrame（连接用完即关）"""
+    con = duckdb.connect(str(DB_PATH), read_only=True)
+    try:
+        return con.execute(sql, params or []).fetchdf()
+    finally:
+        con.close()
