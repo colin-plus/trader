@@ -14,9 +14,6 @@ const modalVisible = ref(false)
 const modalLoading = ref(false)
 const modalError = ref('')
 const evalCode = ref('all')
-const evalLevel = ref('充足')
-const evalDecision = ref('')
-const evalNote = ref('')
 
 async function load() {
   loading.value = true
@@ -46,7 +43,7 @@ const filtered = computed(() => {
   })
 })
 
-// 新增评估提交
+// 新增评估提交（后台自动算结论落库）
 async function submitEval() {
   if (evalCode.value === 'all') {
     modalError.value = '请选择标的'
@@ -58,12 +55,7 @@ async function submitEval() {
     const r = await fetch('/api/margin/evaluations', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        code: evalCode.value,
-        margin_level: evalLevel.value,
-        decision: evalDecision.value || null,
-        note: evalNote.value || null,
-      }),
+      body: JSON.stringify({ code: evalCode.value }),
     })
     if (!r.ok) {
       const err = await r.json().catch(() => ({}))
@@ -71,9 +63,6 @@ async function submitEval() {
     }
     modalVisible.value = false
     evalCode.value = 'all'
-    evalLevel.value = '充足'
-    evalDecision.value = ''
-    evalNote.value = ''
     await load()
   } catch (e) {
     modalError.value = `评估失败: ${e.message}`
@@ -199,36 +188,8 @@ const levelDefs = [
           <div style="font-size:12px; color:var(--color-text-3); margin-bottom:4px;">标的</div>
           <StockSearch v-model="evalCode" />
         </div>
-        <div>
-          <div style="font-size:12px; color:var(--color-text-3); margin-bottom:4px;">结论</div>
-          <a-select
-            v-model="evalLevel"
-            :style="{ width: '100%' }"
-            :options="[
-              { label: '充足', value: '充足' },
-              { label: '一般', value: '一般' },
-              { label: '不足', value: '不足' },
-              { label: '无边际', value: '无边际' },
-            ]"
-          />
-        </div>
-        <div>
-          <div style="font-size:12px; color:var(--color-text-3); margin-bottom:4px;">决策</div>
-          <a-select
-            v-model="evalDecision"
-            :style="{ width: '100%' }"
-            allow-clear
-            placeholder="（可选）"
-            :options="[
-              { label: '买入', value: '买入' },
-              { label: '观察', value: '观察' },
-              { label: '不买', value: '不买' },
-            ]"
-          />
-        </div>
-        <div>
-          <div style="font-size:12px; color:var(--color-text-3); margin-bottom:4px;">备注</div>
-          <a-textarea v-model="evalNote" :rows="2" placeholder="（可选）评估理由" />
+        <div style="font-size:12px; color:var(--color-text-3);">
+          选择标的后点击保存，系统将基于当前估值数据自动计算安全边际结论并写入记录。
         </div>
         <span style="color:#f53f3f; font-size:12px;" v-if="modalError">{{ modalError }}</span>
       </div>

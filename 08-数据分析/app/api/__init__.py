@@ -287,27 +287,23 @@ def margin_dashboard():
 
 @router.post("/margin/evaluations")
 def create_evaluation(body: dict):
-    """按需评估：委托独立进程落库（后端只读连接与写进程共存无锁冲突）"""
+    """按需评估：委托独立进程自动计算结论并落库（只收 code，失败返回原因）"""
     import subprocess
     import sys as _sys
 
     code = str(body.get("code", "")).strip()
     if not code:
         raise HTTPException(400, "code 必填")
-    margin_level = str(body.get("margin_level", "")).strip()
-    if margin_level not in ("充足", "一般", "不足", "无边际"):
-        raise HTTPException(400, "margin_level 必须为 充足/一般/不足/无边际")
-    payload = {"code": code, "margin_level": margin_level, "decision": body.get("decision"), "note": body.get("note")}
     script = pathlib.Path(__file__).parent.parent.parent / "scripts" / "write_evaluation.py"
     r = subprocess.run(
         [_sys.executable, str(script)],
-        input=json.dumps(payload, ensure_ascii=False),
+        input=json.dumps({"code": code}),
         capture_output=True,
         text=True,
         timeout=15,
     )
     if r.returncode != 0:
-        raise HTTPException(500, f"评估落库失败: {r.stderr[-200:]}")
+        raise HTTPException(400, r.stderr.strip() or "评估失败")
     return json.loads(r.stdout)
 
 
