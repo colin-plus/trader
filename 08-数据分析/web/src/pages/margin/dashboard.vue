@@ -1,11 +1,13 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 
 const stocks = ref([])
 const rows = ref([])
 const macro = ref(null)
 const loading = ref(false)
 const error = ref('')
+const filterCode = ref('all')
+const filterLevel = ref('all')
 
 async function load() {
   loading.value = true
@@ -38,6 +40,15 @@ async function load() {
 
 onMounted(load)
 
+// 筛选：股票 + 结论
+const filtered = computed(() => {
+  return rows.value.filter(r => {
+    const codeOk = filterCode.value === 'all' || r.code === filterCode.value
+    const levelOk = filterLevel.value === 'all' || levelTag(r.pe, r.pb, r.dividend_yield).text === filterLevel.value
+    return codeOk && levelOk
+  })
+})
+
 function fmt(v) {
   return v === null || v === undefined ? '—' : Number(v).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
@@ -59,6 +70,24 @@ function levelTag(pe, pb, dy) {
   <div>
     <div style="display:flex; align-items:center; gap:12px; margin-bottom:16px;">
       <h2 style="font-size:16px; margin:0;">安全边际评估看板</h2>
+      <a-select
+        v-model="filterCode"
+        :style="{ width: '200px' }"
+        :options="[{ label: '全部标的', value: 'all' }, ...stocks.map(s => ({ label: `${s.name}（${s.code}）`, value: s.code }))]"
+        placeholder="全部标的"
+      />
+      <a-select
+        v-model="filterLevel"
+        :style="{ width: '120px' }"
+        :options="[
+          { label: '全部结论', value: 'all' },
+          { label: '充足', value: '充足' },
+          { label: '一般', value: '一般' },
+          { label: '不足', value: '不足' },
+          { label: '无', value: '无' },
+        ]"
+        placeholder="全部结论"
+      />
       <a-spin v-if="loading" size="small" />
       <span style="color:#f53f3f; font-size:13px;" v-if="error">{{ error }}</span>
     </div>
@@ -70,7 +99,7 @@ function levelTag(pe, pb, dy) {
     </div>
 
     <a-card :bordered="true" style="border-radius:8px;">
-      <a-table :data="rows" :pagination="false" :bordered="true" size="small" :scroll="{ x: 'max-content' }">
+      <a-table :data="filtered" :pagination="false" :bordered="true" size="small" :scroll="{ x: 'max-content' }">
         <template #columns>
           <a-table-column title="代码" data-index="code" :width="100" />
           <a-table-column title="名称" data-index="name" />
