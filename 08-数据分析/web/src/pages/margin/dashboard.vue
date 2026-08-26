@@ -1,5 +1,6 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { Message } from '@arco-design/web-vue'
 import StockSearch from '../../components/StockSearch.vue'
 
 const rows = ref([])
@@ -61,9 +62,11 @@ async function submitEval() {
       const err = await r.json().catch(() => ({}))
       throw new Error(err.detail || `HTTP ${r.status}`)
     }
+    const result = await r.json()
     modalVisible.value = false
     evalCode.value = 'all'
     await load()
+    Message.success(`评估成功：${result.code} 结论「${result.margin_level}」`)
   } catch (e) {
     modalError.value = `评估失败: ${e.message}`
   } finally {
