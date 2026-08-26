@@ -104,12 +104,12 @@ const levelDefs = [
     <!-- 宏观基准 + 结论定义问号 -->
     <div v-if="macro" style="display:flex; align-items:center; gap:8px; margin-bottom:16px; font-size:13px; color:var(--color-text-3);">
       <span>10 年期国债收益率：<b style="color:var(--color-text-1);">{{ macro.cn10y }}%</b>
-      （{{ macro.date }}）· 股息率安全线 ≥ {{ (macro.cn10y * 1.5).toFixed(2) }}%</span>
+      （{{ macro.date }}）· 股息率安全线 ≥ {{ (macro.cn10y * 1.5).toFixed(2) }}%。</span>
       <a-popover trigger="click" position="bottom">
-        <IconQuestionCircle
-          style="cursor:pointer; font-size:14px; color:var(--color-text-3);"
-          @click.stop
-        />
+        <span style="cursor:pointer; display:inline-flex; align-items:center; gap:2px;">
+          <span style="color:var(--color-link, #165dff);">查看结论定义</span>
+          <IconQuestionCircle style="font-size:14px; color:var(--color-text-3);" @click.stop />
+        </span>
         <template #content>
           <div style="font-size:12px; line-height:2; color:var(--color-text-2);">
             <div style="font-weight:600; color:var(--color-text-1); margin-bottom:4px;">结论定义</div>
