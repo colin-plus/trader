@@ -10,6 +10,7 @@ const filterCode = ref('all')
 const filterLevel = ref('all')
 const searchOptions = ref([])
 const searchLoading = ref(false)
+const query = ref('')
 
 async function load() {
   loading.value = true
@@ -42,10 +43,18 @@ async function load() {
 
 onMounted(load)
 
-// 清空搜索 → 恢复全部
-watch(filterCode, v => {
-  if (v === undefined || v === null || v === '') filterCode.value = 'all'
+// 清空输入 → 恢复全部
+watch(query, v => {
+  if (!v || v.trim() === '') {
+    filterCode.value = 'all'
+    searchOptions.value = []
+  }
 })
+
+// 选中补全项 → 过滤
+function onSelect(code) {
+  filterCode.value = code
+}
 
 // 远程搜索：输入代码/名称 → 后端返回前 20 条
 async function onSearch(q) {
@@ -94,15 +103,14 @@ function levelTag(pe, pb, dy) {
   <div>
     <div style="display:flex; align-items:center; gap:12px; margin-bottom:16px;">
       <h2 style="font-size:16px; margin:0;">安全边际评估看板</h2>
-      <a-select
-        v-model="filterCode"
+      <a-auto-complete
+        v-model="query"
+        :data="searchOptions"
         :style="{ width: '220px' }"
-        :options="searchOptions"
-        :loading="searchLoading"
-        show-search
-        allow-clear
         placeholder="搜索代码/名称…"
+        allow-clear
         @search="onSearch"
+        @select="onSelect"
       />
       <a-select
         v-model="filterLevel"
