@@ -4,36 +4,42 @@
 - 后端（本模块）只读连接 —— 查询/展示
 - 写操作由采集脚本（scripts/）独占执行
 - 避免后端与采集脚本争写锁
+
+线程模型：duckdb 连接不可跨线程共享（并发查询会互相干扰），
+故用 threading.local 每线程一个只读连接。
 """
 import pathlib
+import threading
 
 import duckdb
+import pandas as pd
 
 DB_PATH = pathlib.Path(__file__).parent.parent / "data" / "trader.duckdb"
 
-_conn = None
+_local = threading.local()
 
 
 def get_conn():
-    """单例只读连接"""
-    global _conn
-    if _conn is None:
-        _conn = duckdb.connect(str(DB_PATH), read_only=True)
-    return _conn
+    """当前线程的只读连接（每线程一个，线程安全）"""
+    conn = getattr(_local, "conn", None)
+    if conn is None:
+        conn = duckdb.connect(str(DB_PATH), read_only=True)
+        _local.conn = conn
+    return conn
 
 
 def query_df(sql, params=None):
     """执行查询返回 pandas DataFrame"""
     con = get_conn()
     if params:
-        return con.execute(sql, params).fetchdf()
-    return con.execute(sql).fetchdf()
+        df = con.execute(sql, params).fetchdf()
+    else:
+        df = con.execute(sql).fetchdf()
+    return df if df is not None else pd.DataFrame()
 
 
 def query_all(sql, params=None):
     """执行查询返回 dict 列表（date 字段转为 YYYY-MM-DD 字符串，NaT/NaN → None）"""
-    import pandas as pd
-
     df = query_df(sql, params)
     if not df.empty:
         for col in df.columns:

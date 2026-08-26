@@ -42,12 +42,13 @@ def asset_performance(code: str) -> dict:
         sell_shares = sum(r["shares"] for r in sells)
         realized = round(sell_net - sell_shares * cost, 2)
 
-    txn = db.query_all(
+    txn_rows = db.query_all(
         "SELECT COUNT(*) AS n, "
         "SUM(CASE WHEN direction='buy' THEN 1 ELSE 0 END) AS buys, "
         "SUM(CASE WHEN direction='sell' THEN 1 ELSE 0 END) AS sells "
         "FROM transaction WHERE code = ?", [code],
-    )[0]
+    )
+    txn = txn_rows[0] if txn_rows else {"n": 0, "buys": 0, "sells": 0}
 
     return {
         "code": code,
