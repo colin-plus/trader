@@ -91,7 +91,11 @@ try:
     else:
         margin_level = "不足"
 
-    # 落库
+    # 落库（幂等：同日同标的覆盖——先删旧记录，保证每天每标的一条）
+    con.execute(
+        "DELETE FROM margin_evaluation WHERE code = ? AND eval_date = ?",
+        [code, str(eval_date)],
+    )
     max_id = con.execute("SELECT COALESCE(MAX(id), 0) + 1 FROM margin_evaluation").fetchone()[0]
     con.execute(
         "INSERT INTO margin_evaluation (id, code, eval_date, price, pe, pb, dividend_yield, "
