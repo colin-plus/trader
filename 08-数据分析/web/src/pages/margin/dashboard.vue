@@ -1,83 +1,3 @@
-<script setup>
-import { ref, computed, onMounted } from 'vue'
-import StockSearch from '../../components/StockSearch.vue'
-
-const stocks = ref([])
-const rows = ref([])
-const macro = ref(null)
-const loading = ref(false)
-const error = ref('')
-const filterCode = ref('all')
-const filterLevel = ref([])  // 多选，空数组 = 全部结论
-
-async function load() {
-  loading.value = true
-  error.value = ''
-  try {
-    const [s, m] = await Promise.all([
-      fetch('/api/stocks').then(r => r.json()),
-      fetch('/api/margin/macro').then(r => r.json()),
-    ])
-    stocks.value = s
-    macro.value = m[0] || null
-    const statuses = await Promise.all(
-      s.map(st => fetch(`/api/margin/status/${st.code}`).then(r => r.json()))
-    )
-    rows.value = statuses.map((d, i) => ({
-      key: i,
-      code: d.code,
-      name: d.name,
-      close: d.price,           // 最新收盘价（status API 的 price 字段）
-      ...(d.latest || {}),
-      pe_pct: d.percentile_5y?.pe,
-      pb_pct: d.percentile_5y?.pb,
-      evals: d.evaluation_count,
-    }))
-  } catch (e) {
-    error.value = `加载失败: ${e.message}`
-  } finally {
-    loading.value = false
-  }
-}
-
-onMounted(load)
-
-// 筛选：股票 + 结论（多选，空数组 = 全部）
-const filtered = computed(() => {
-  return rows.value.filter(r => {
-    const codeOk = filterCode.value === 'all' || r.code === filterCode.value
-    const level = levelTag(r.pe, r.pb, r.dividend_yield).text
-    const levelOk = filterLevel.value.length === 0 || filterLevel.value.includes(level)
-    return codeOk && levelOk
-  })
-})
-
-function fmt(v) {
-  return v === null || v === undefined ? '—' : Number(v).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-}
-function fmtPct(v) {
-  return v === null || v === undefined ? '—' : `${Number(v).toFixed(1)}%`
-}
-function levelTag(pe, pb, dy) {
-  // 与 eval_margin.py 同规则：股息≥3% + PB≤1.5 或分位≤30%
-  // 颜色与 levelDefs / history.vue 统一：充足green 一般orange 不足red 无边际gray
-  if (pe === null || pe === undefined) return { text: '—', color: 'gray' }
-  const a = dy >= 3
-  const c = pb !== null && pb <= 1.5
-  if (a && c) return { text: '充足', color: 'green' }
-  if (a || c) return { text: '一般', color: 'orange' }
-  return { text: '无边际', color: 'gray' }
-}
-
-// 结论定义说明（页面展示用）
-const levelDefs = [
-  { level: '充足', color: 'green', desc: '股息率 ≥3% 且 PB ≤1.5，两把尺子都亮——有充分价值垫' },
-  { level: '一般', color: 'orange', desc: '股息率 ≥3% 或 PB ≤1.5，亮一把——价值垫有限' },
-  { level: '不足', color: 'red', desc: '两把尺子都不亮，但估值不算夸张——不便宜但可评估' },
-  { level: '无边际', color: 'gray', desc: '两把尺子都不亮且高 PE（>30）——无价值垫，不属于安全边际投资（≠不能买）' },
-]
-</script>
-
 <template>
   <div>
     <div style="display:flex; align-items:center; gap:12px; margin-bottom:16px;">
@@ -98,6 +18,8 @@ const levelDefs = [
       />
       <a-spin v-if="loading" size="small" />
       <span style="color:#f53f3f; font-size:13px;" v-if="error">{{ error }}</span>
+      <div style="flex:1;"></div>
+      <a-button type="primary" size="small" @click="modalVisible = true">新增评估</a-button>
     </div>
 
     <!-- 宏观基准 + 结论定义问号 -->
@@ -124,15 +46,16 @@ const levelDefs = [
         <template #columns>
           <a-table-column title="代码" data-index="code" :width="100" />
           <a-table-column title="名称" data-index="name" />
-          <a-table-column title="现价" :width="90" align="right">
-            <template #cell="{ record }">{{ fmt(record.close) }}</template>
+          <a-table-column title="评估日期" data-index="eval_date" :width="110" />
+          <a-table-column title="价格" :width="90" align="right">
+            <template #cell="{ record }">{{ fmt(record.price) }}</template>
           </a-table-column>
           <a-table-column title="PE" :width="90" align="right">
             <template #cell="{ record }">{{ fmt(record.pe) }}</template>
           </a-table-column>
           <a-table-column title="PE分位" :width="90" align="right">
             <template #cell="{ record }">
-              <span :style="{ color: record.pe_pct !== null && record.pe_pct <= 30 ? '#00b42a' : 'inherit' }">{{ fmtPct(record.pe_pct) }}</span>
+              <span :style="{ color: record.pe_percentile !== null && record.pe_percentile <= 30 ? '#00b42a' : 'inherit' }">{{ fmtPct(record.pe_percentile) }}</span>
             </template>
           </a-table-column>
           <a-table-column title="PB" :width="90" align="right">
@@ -143,16 +66,15 @@ const levelDefs = [
               <span :style="{ color: record.dividend_yield >= 3 ? '#00b42a' : 'inherit' }">{{ fmtPct(record.dividend_yield) }}</span>
             </template>
           </a-table-column>
-          <a-table-column title="结论" :width="80" align="center">
+          <a-table-column title="结论" :width="90" align="center">
             <template #cell="{ record }">
-              <a-tag :color="levelTag(record.pe, record.pb, record.dividend_yield).color" size="small">
-                {{ levelTag(record.pe, record.pb, record.dividend_yield).text }}
-              </a-tag>
+              <a-tag :color="levelColor(record.margin_level)" size="small">{{ record.margin_level }}</a-tag>
             </template>
           </a-table-column>
-          <a-table-column title="评估次数" :width="90" align="right">
-            <template #cell="{ record }">{{ record.evals }}</template>
+          <a-table-column title="决策" :width="90">
+            <template #cell="{ record }">{{ record.decision || '—' }}</template>
           </a-table-column>
+          <a-table-column title="备注" data-index="note" />
           <a-table-column title="操作" :width="100">
             <template #cell="{ record }">
               <router-link class="table-link" :to="`/margin/history?code=${record.code}`">历史</router-link>
@@ -161,5 +83,56 @@ const levelDefs = [
         </template>
       </a-table>
     </a-card>
+
+    <!-- 新增评估弹窗 -->
+    <a-modal
+      v-model:visible="modalVisible"
+      title="新增评估"
+      :width="420"
+      @cancel="modalError = ''"
+    >
+      <div style="display:flex; flex-direction:column; gap:12px;">
+        <div>
+          <div style="font-size:12px; color:var(--color-text-3); margin-bottom:4px;">标的</div>
+          <StockSearch v-model="evalCode" />
+        </div>
+        <div>
+          <div style="font-size:12px; color:var(--color-text-3); margin-bottom:4px;">结论</div>
+          <a-select
+            v-model="evalLevel"
+            :style="{ width: '100%' }"
+            :options="[
+              { label: '充足', value: '充足' },
+              { label: '一般', value: '一般' },
+              { label: '不足', value: '不足' },
+              { label: '无边际', value: '无边际' },
+            ]"
+          />
+        </div>
+        <div>
+          <div style="font-size:12px; color:var(--color-text-3); margin-bottom:4px;">决策</div>
+          <a-select
+            v-model="evalDecision"
+            :style="{ width: '100%' }"
+            allow-clear
+            placeholder="（可选）"
+            :options="[
+              { label: '买入', value: '买入' },
+              { label: '观察', value: '观察' },
+              { label: '不买', value: '不买' },
+            ]"
+          />
+        </div>
+        <div>
+          <div style="font-size:12px; color:var(--color-text-3); margin-bottom:4px;">备注</div>
+          <a-textarea v-model="evalNote" :rows="2" placeholder="（可选）评估理由" />
+        </div>
+        <span style="color:#f53f3f; font-size:12px;" v-if="modalError">{{ modalError }}</span>
+      </div>
+      <template #footer>
+        <a-button @click="modalVisible = false">取消</a-button>
+        <a-button type="primary" :loading="modalLoading" @click="submitEval">保存评估</a-button>
+      </template>
+    </a-modal>
   </div>
 </template>

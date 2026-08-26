@@ -1,4 +1,6 @@
 """API 路由：行情 / 分价 / 资金流 / 财务 / 标的 / 我的 / 安全边际。"""
+import json
+import pathlib
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Query
@@ -262,6 +264,51 @@ def margin_status(code: str):
         "percentile_5y": {"pe": pe_pct, "pb": pb_pct},
         "evaluation_count": evals[0]["n"] if evals else 0,
     }
+
+
+@router.get("/margin/dashboard")
+def margin_dashboard():
+    """评估看板：每标的最近一次评估记录（含名称）"""
+    return db.query_all(
+        """
+        WITH ranked AS (
+            SELECT e.*, ROW_NUMBER() OVER (PARTITION BY code ORDER BY eval_date DESC, id DESC) AS rn
+            FROM margin_evaluation e
+        )
+        SELECT r.code, a.name, r.eval_date, r.price, r.pe, r.pb, r.dividend_yield,
+               r.pe_percentile, r.pb_percentile, r.margin_level, r.decision, r.note
+        FROM ranked r
+        JOIN investable_asset a ON a.code = r.code
+        WHERE r.rn = 1
+        ORDER BY a.name
+        """
+    )
+
+
+@router.post("/margin/evaluations")
+def create_evaluation(body: dict):
+    """按需评估：委托独立进程落库（后端只读连接与写进程共存无锁冲突）"""
+    import subprocess
+    import sys as _sys
+
+    code = str(body.get("code", "")).strip()
+    if not code:
+        raise HTTPException(400, "code 必填")
+    margin_level = str(body.get("margin_level", "")).strip()
+    if margin_level not in ("充足", "一般", "不足", "无边际"):
+        raise HTTPException(400, "margin_level 必须为 充足/一般/不足/无边际")
+    payload = {"code": code, "margin_level": margin_level, "decision": body.get("decision"), "note": body.get("note")}
+    script = pathlib.Path(__file__).parent.parent.parent / "scripts" / "write_evaluation.py"
+    r = subprocess.run(
+        [_sys.executable, str(script)],
+        input=json.dumps(payload, ensure_ascii=False),
+        capture_output=True,
+        text=True,
+        timeout=15,
+    )
+    if r.returncode != 0:
+        raise HTTPException(500, f"评估落库失败: {r.stderr[-200:]}")
+    return json.loads(r.stdout)
 
 
 @router.get("/meta")
