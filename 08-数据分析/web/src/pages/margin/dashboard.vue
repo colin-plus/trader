@@ -27,6 +27,7 @@ async function load() {
       key: i,
       code: d.code,
       name: d.name,
+      close: d.price,           // 最新收盘价（status API 的 price 字段）
       ...(d.latest || {}),
       pe_pct: d.percentile_5y?.pe,
       pb_pct: d.percentile_5y?.pb,

@@ -222,6 +222,11 @@ def margin_status(code: str):
         "WHERE code = ? ORDER BY report_date DESC LIMIT 1",
         [code],
     )
+    # 最新收盘价（价格在 daily_kline，margin_daily 只有估值）
+    price_row = db.query_all(
+        "SELECT close FROM daily_kline WHERE code = ? ORDER BY date DESC LIMIT 1",
+        [code],
+    )
     # 近 5 年 PE/PB 分位（当前值在历史序列中的百分位）
     pe_pct = pb_pct = None
     if latest:
@@ -253,6 +258,7 @@ def margin_status(code: str):
         "name": name,
         "latest": latest[0] if latest else None,
         "factor": factor[0] if factor else None,
+        "price": price_row[0]["close"] if price_row else None,
         "percentile_5y": {"pe": pe_pct, "pb": pb_pct},
         "evaluation_count": evals[0]["n"] if evals else 0,
     }
