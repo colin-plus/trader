@@ -1,4 +1,6 @@
-"""API 路由：行情 / 分价 / 资金流 / 财务 / 标的 / 我的。"""
+"""API 路由：行情 / 分价 / 资金流 / 财务 / 标的 / 我的 / 安全边际。"""
+from typing import Optional
+
 from fastapi import APIRouter, HTTPException, Query
 
 from app import db, performance
@@ -142,6 +144,105 @@ def perf(code: str):
     if code not in _valid_codes():
         raise HTTPException(404, f"未跟踪的股票代码: {code}")
     return performance.asset_performance(code)
+
+
+@router.get("/margin/macro")
+def margin_macro():
+    """宏观基准（10 年期国债收益率）"""
+    return db.query_all("SELECT date, cn10y FROM margin_macro ORDER BY date DESC LIMIT 30")
+
+
+@router.get("/margin/factors/{code}")
+def margin_factors(code: str):
+    """估值因子历史（按报告期）"""
+    if code not in _valid_codes():
+        raise HTTPException(404, f"未跟踪的股票代码: {code}")
+    return db.query_all(
+        "SELECT report_date, eps, bps, dps, total_shares, float_shares "
+        "FROM margin_factor WHERE code = ? ORDER BY report_date DESC",
+        [code],
+    )
+
+
+@router.get("/margin/daily/{code}")
+def margin_daily(code: str, days: int = Query(60, ge=5, le=1000)):
+    """估值日快照（PE/PB/股息率序列）"""
+    if code not in _valid_codes():
+        raise HTTPException(404, f"未跟踪的股票代码: {code}")
+    return db.query_all(
+        "SELECT date, pe, pb, dividend_yield FROM margin_daily "
+        "WHERE code = ? ORDER BY date DESC LIMIT ?",
+        [code, days],
+    )
+
+
+@router.get("/margin/evaluations")
+def margin_evaluations(code: Optional[str] = None):
+    """安全边际评估记录（可按标的过滤）"""
+    if code:
+        return db.query_all(
+            "SELECT id, code, eval_date, price, pe, pb, dividend_yield, pe_percentile, "
+            "pb_percentile, margin_level, discount, decision, note "
+            "FROM margin_evaluation WHERE code = ? ORDER BY eval_date DESC, id DESC",
+            [code],
+        )
+    return db.query_all(
+        "SELECT id, code, eval_date, price, pe, pb, dividend_yield, pe_percentile, "
+        "pb_percentile, margin_level, discount, decision, note "
+        "FROM margin_evaluation ORDER BY eval_date DESC, id DESC"
+    )
+
+
+@router.get("/margin/status/{code}")
+def margin_status(code: str):
+    """单标的安全边际状态（最新估值 + 5年分位 + 评估历史计数）"""
+    if code not in _valid_codes():
+        raise HTTPException(404, f"未跟踪的股票代码: {code}")
+    name = _asset_name(code)
+    latest = db.query_all(
+        "SELECT date, pe, pb, dividend_yield FROM margin_daily "
+        "WHERE code = ? ORDER BY date DESC LIMIT 1",
+        [code],
+    )
+    factor = db.query_all(
+        "SELECT report_date, eps, bps, dps FROM margin_factor "
+        "WHERE code = ? ORDER BY report_date DESC LIMIT 1",
+        [code],
+    )
+    # 近 5 年 PE/PB 分位（当前值在历史序列中的百分位）
+    pe_pct = pb_pct = None
+    if latest:
+        pe = latest[0]["pe"]
+        pb = latest[0]["pb"]
+        if pe is not None:
+            pe_hist = db.query_all(
+                "SELECT pe FROM margin_daily WHERE code = ? AND pe IS NOT NULL "
+                "AND date >= current_date - INTERVAL '5 years' ORDER BY pe",
+                [code],
+            )
+            if pe_hist:
+                below = sum(1 for h in pe_hist if h["pe"] <= pe)
+                pe_pct = round(below / len(pe_hist) * 100, 1)
+        if pb is not None:
+            pb_hist = db.query_all(
+                "SELECT pb FROM margin_daily WHERE code = ? AND pb IS NOT NULL "
+                "AND date >= current_date - INTERVAL '5 years' ORDER BY pb",
+                [code],
+            )
+            if pb_hist:
+                below = sum(1 for h in pb_hist if h["pb"] <= pb)
+                pb_pct = round(below / len(pb_hist) * 100, 1)
+    evals = db.query_all(
+        "SELECT COUNT(*) AS n FROM margin_evaluation WHERE code = ?", [code]
+    )
+    return {
+        "code": code,
+        "name": name,
+        "latest": latest[0] if latest else None,
+        "factor": factor[0] if factor else None,
+        "percentile_5y": {"pe": pe_pct, "pb": pb_pct},
+        "evaluation_count": evals[0]["n"] if evals else 0,
+    }
 
 
 @router.get("/meta")

@@ -13,11 +13,17 @@ investable_asset（标的主数据）
   ├── daily_kline      日线行情（1 标的 : N 日）
   ├── volume_profile   分价分布（1 标的 : N 日 : N 价格档）
   ├── daily_capital_flow 资金流向·日（1 标的 : N 日）
-  └── finance          财务数据（1 标的 : N 报告期 × kind）
+  ├── finance          财务数据（1 标的 : N 报告期 × kind）
+  ├── margin_factor    估值因子（静态·财报期）
+  ├── margin_daily     估值日快照（动态·每日）
+  ├── margin_evaluation 安全边际评估（事件·人工）
+  └── margin_macro     宏观基准（全市场共用）
 meta                    库级元信息（更新时间等）
 ```
 
 **Performance（收益统计）**：领域概念，**不建表**——由 position + transaction + daily_kline（最新收盘价）实时计算（app/performance.py），API `/api/performance/*`。口径：最终对账以券商 APP 为准，本层为辅助分析（持仓市值/浮盈/已实现盈亏/交易统计）。
+
+**安全边际（Margin of Safety）**：四张 `margin_` 前缀表构成评估体系——`margin_factor`（因子，财报驱动，静态）→ `margin_daily`（估值快照，价格驱动，每日 cron 计算落库）→ `margin_evaluation`（评估事件，人工决策一次一条）→ `margin_macro`（宏观基准，全市场共用）。计算流：因子 + 行情 + 宏观 → cron 算 margin_daily → 评估时读取落 margin_evaluation。
 
 ### 工程约定（非教条，务实原则）
 
@@ -193,6 +199,78 @@ meta                    库级元信息（更新时间等）
 | balance | 报告期截止日 | 资产负债表详情：`{"assets": 总资产, "liabilities": 总负债, "equity": 净资产, "cash": 货币资金, ...}` |
 
 **说明**：JSON payload 的取舍——个人工具灵活性优先（新指标不加列），代价是库内不保证字段完整性，由采集脚本校验，字段约定见上表（文档级强类型）。复合主键 (code, report_date, kind) 防重复。
+
+---
+
+## 表：margin_factor（估值因子）
+
+**用途**：安全边际计算的基础原料——每股收益/净资产/分红/股本，**历史报告期逐期累积**（算 5-10 年 PE/PB 分位的前提）。静态数据，财报驱动，季度更新。
+
+| 字段 | 类型 | 约束 | 说明 |
+|---|---|---|---|
+| code | VARCHAR | PK 复合, NOT NULL, FK→investable_asset | 标的代码 |
+| report_date | DATE | PK 复合, NOT NULL | 报告期（财报截止日） |
+| eps | DOUBLE | NULL | 每股收益（元） |
+| bps | DOUBLE | NULL | 每股净资产（元） |
+| dps | DOUBLE | NULL | 每股分红（元，滚动 12 个月） |
+| total_shares | BIGINT | NULL | 总股本（股） |
+| float_shares | BIGINT | NULL | 流通股本（股） |
+
+**说明**：因子 + daily_kline（价格）→ PE/PB/股息率（margin_daily）。因子按报告期入库，同一 code 多行=多期历史；最新因子 = 按 report_date 取最新行。
+
+---
+
+## 表：margin_daily（估值日快照）
+
+**用途**：每日盘后计算的 PE/PB/股息率（动态，价格驱动），供安全边际评估与历史分位查询。来源：cron 用 margin_factor 最新因子 + daily_kline 收盘价计算落库。
+
+| 字段 | 类型 | 约束 | 说明 |
+|---|---|---|---|
+| code | VARCHAR | PK 复合, NOT NULL, FK→investable_asset | 标的代码 |
+| date | DATE | PK 复合, NOT NULL | 交易日 |
+| pe | DOUBLE | NULL | 市盈率 = 收盘价 ÷ 最新 EPS |
+| pb | DOUBLE | NULL | 市净率 = 收盘价 ÷ 最新 BPS |
+| dividend_yield | DOUBLE | NULL | 股息率（%）= DPS ÷ 收盘价 × 100 |
+
+**说明**：**历史分位不单独存储**——由 margin_daily 的历史行直接算（如近 5 年 PE 分位 = 当前 PE 在历史 PE 序列中的百分位），SQL 实时计算。复合主键 (code, date) 防同日重复。
+
+---
+
+## 表：margin_evaluation（安全边际评估记录）
+
+**用途**：**事件表**——每次人工评估落一条（今年评估 100 次 = 100 条记录），冻结评估时点数据供复盘。与 transaction 同哲学（事实留痕）。
+
+| 字段 | 类型 | 约束 | 说明 |
+|---|---|---|---|
+| id | INTEGER | PK, NOT NULL | 评估序号 |
+| code | VARCHAR | NOT NULL, FK→investable_asset | 标的代码 |
+| eval_date | DATE | NOT NULL | 评估日期 |
+| price | DOUBLE | NOT NULL | 评估时价格（快照） |
+| pe | DOUBLE | NULL | 评估时 PE（快照） |
+| pb | DOUBLE | NULL | 评估时 PB（快照） |
+| dividend_yield | DOUBLE | NULL | 评估时股息率（快照） |
+| pe_percentile | DOUBLE | NULL | 评估时 PE 历史分位（快照） |
+| pb_percentile | DOUBLE | NULL | 评估时 PB 历史分位（快照） |
+| margin_level | VARCHAR | NOT NULL, CHECK IN ('充足','一般','不足','无') | 安全边际结论 |
+| discount | DOUBLE | NULL | 折扣率（%） |
+| decision | VARCHAR | NULL | 决策：买入/观察/不买 |
+| note | VARCHAR | NULL | 评估理由/备注 |
+| created_at | TIMESTAMP | DEFAULT now() | 记录时间 |
+
+**说明**：字段为"评估时点快照"（价格会变，记录冻结当时数据）；100 条记录 = 100 个时点，可复盘"当时数据 vs 后来走势"。
+
+---
+
+## 表：margin_macro（宏观基准）
+
+**用途**：全市场共用的无风险利率基准（10 年期国债收益率），尺子A 的基准线——判断"股息率够不够高"（股息率 ≥ 国债 × 1.5 才有讨论价值）。全市场一条，每周更新即可。
+
+| 字段 | 类型 | 约束 | 说明 |
+|---|---|---|---|
+| date | DATE | PK, NOT NULL | 日期 |
+| cn10y | DOUBLE | NULL | 10 年期国债收益率（%） |
+
+**说明**：无 code 关联（宏观数据不属任何标的）。未来可扩展其他宏观指标（如 LPR、CPI）加列即可。
 
 ---
 
