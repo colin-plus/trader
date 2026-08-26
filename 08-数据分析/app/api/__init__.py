@@ -8,6 +8,19 @@ from app import db, performance
 router = APIRouter(prefix="/api")
 
 
+@router.get("/stocks/search")
+def search_stocks(q: str = Query(..., min_length=1, max_length=20)):
+    """股票搜索（代码/名称模糊匹配，返回前 20 条）——供前端输入自动补全"""
+    like = f"%{q}%"
+    rows = db.query_all(
+        "SELECT code, name, type FROM investable_asset "
+        "WHERE code LIKE ? OR name LIKE ? "
+        "ORDER BY (code LIKE ?) DESC, code LIMIT 20",
+        [like, like, f"{q}%"],
+    )
+    return rows
+
+
 @router.get("/stocks")
 def list_stocks():
     """关注的股票列表（含类型，前端按类型裁剪功能）"""

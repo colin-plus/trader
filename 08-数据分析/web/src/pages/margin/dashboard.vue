@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 
 const stocks = ref([])
 const rows = ref([])
@@ -8,6 +8,8 @@ const loading = ref(false)
 const error = ref('')
 const filterCode = ref('all')
 const filterLevel = ref('all')
+const searchOptions = ref([])
+const searchLoading = ref(false)
 
 async function load() {
   loading.value = true
@@ -39,6 +41,28 @@ async function load() {
 }
 
 onMounted(load)
+
+// 清空搜索 → 恢复全部
+watch(filterCode, v => {
+  if (v === undefined || v === null || v === '') filterCode.value = 'all'
+})
+
+// 远程搜索：输入代码/名称 → 后端返回前 20 条
+async function onSearch(q) {
+  if (!q || q.length < 1) {
+    searchOptions.value = []
+    return
+  }
+  searchLoading.value = true
+  try {
+    const r = await fetch(`/api/stocks/search?q=${encodeURIComponent(q)}`)
+    searchOptions.value = (await r.json()).map(x => ({ label: `${x.name}（${x.code}）`, value: x.code }))
+  } catch (e) {
+    searchOptions.value = []
+  } finally {
+    searchLoading.value = false
+  }
+}
 
 // 筛选：股票 + 结论
 const filtered = computed(() => {
@@ -72,9 +96,13 @@ function levelTag(pe, pb, dy) {
       <h2 style="font-size:16px; margin:0;">安全边际评估看板</h2>
       <a-select
         v-model="filterCode"
-        :style="{ width: '200px' }"
-        :options="[{ label: '全部标的', value: 'all' }, ...stocks.map(s => ({ label: `${s.name}（${s.code}）`, value: s.code }))]"
-        placeholder="全部标的"
+        :style="{ width: '220px' }"
+        :options="searchOptions"
+        :loading="searchLoading"
+        show-search
+        allow-clear
+        placeholder="搜索代码/名称…"
+        @search="onSearch"
       />
       <a-select
         v-model="filterLevel"
