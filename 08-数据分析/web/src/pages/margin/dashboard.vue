@@ -120,7 +120,7 @@ const levelDefs = [
 <template>
   <div>
     <div style="display:flex; align-items:center; gap:12px; margin-bottom:16px;">
-      <h2 style="font-size:16px; margin:0;">安全边际评估看板</h2>
+      <h2 style="font-size:16px; margin:0;">评估看板</h2>
       <StockSearch v-model="filterCode" />
       <a-select
         v-model="filterLevel"

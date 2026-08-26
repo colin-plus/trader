@@ -44,7 +44,7 @@ function levelColor(level) {
 <template>
   <div>
     <div style="display:flex; align-items:center; gap:12px; margin-bottom:16px;">
-      <h2 style="font-size:16px; margin:0;">安全边际评估历史</h2>
+      <h2 style="font-size:16px; margin:0;">评估历史</h2>
       <StockSearch v-model="selected" />
       <a-spin v-if="loading" size="small" />
       <span style="color:#f53f3f; font-size:13px;" v-if="error">{{ error }}</span>
