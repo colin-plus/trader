@@ -11,6 +11,7 @@ investable_asset（标的主数据）
   ├── position         持仓快照（我的数据，抄券商）
   ├── transaction      交易记录（我的数据，抄券商）
   ├── daily_kline      日线行情（1 标的 : N 日）
+  ├── breakout_feature 突破确认证据·日（全市场，1 标的 : N 日）
   ├── volume_profile   分价分布（1 标的 : N 日 : N 价格档）
   ├── daily_capital_flow 资金流向·日（1 标的 : N 日）
   ├── finance          财务数据（1 标的 : N 报告期 × kind）
@@ -137,6 +138,100 @@ meta                    库级元信息（更新时间等）
 | volume | INTEGER | NOT NULL | 成交量（手） |
 
 **说明**：复合主键 (code, date) 保证"一只标的一天一行"。OHLC 完整性由采集脚本保证（腾讯源缺失则整行跳过）。复权口径统一 qfq（前复权），API 层不做二次换算。
+
+---
+
+## 表：breakout_feature（突破确认证据·日）
+
+**用途**：把"突破确认三原则"（幅度 / 时间 / 成交量）落成**证据向量**，供全市场扫描。来源：`scripts/build_breakout_features.py`（读 `~/Github/market/data/market.duckdb`，非实时）。
+
+### 设计原则：只存证据，不存结论
+
+阈值（3% / ATR倍数 / 确认天数 / 量能区间）**全部在查询时施加**，表里只落原始证据。这样调整参数不需要重跑 ETL，也是「参数标定页」可行的前提。
+
+### 关键算法口径（改公式必须同步改本节）
+
+**1) 复权**：`market.duckdb.stock_daily` 是**未复权原始价**（已用送转样本验证：除权日观测跌幅 ≈ 理论除权跌幅）。故本表价格由脚本自建**前复权**：
+
+```
+f_e = (1 − D_e / P_prev(e)) / (1 + R_e)            # 单个除权日的复权因子
+      D_e = dividend_per_10 / 10                   # 每股派现
+      R_e = (bonus_ratio + transfer_ratio) / 10     # 每股送转比例
+      P_prev(e) = ex_date 前最后一个交易日的收盘价
+F_t = Π_{e : ex_date(e) > t} f_e                    # 累计因子（前复权：最新价 = 原始价）
+adj_price_t = raw_price_t × F_t
+```
+局限：`stock_dividend` 无配股数据，含配股的样本有残差；`progress != '实施分配'` 的行被剔除。
+
+**2) ATR（Wilder 原始定义，非简单均线）**：
+
+```
+TR_t  = max( H_t − L_t , |H_t − C_{t−1}| , |L_t − C_{t−1}| )
+ATR_n = (TR_1 + ... + TR_n) / n                     # n=14，种子为前 n 个 TR 的算术平均
+ATR_t = ((n−1)·ATR_{t−1} + TR_t) / n                # 等价于 α=1/n 的 EMA
+atr_pct = ATR_t / C_t
+```
+
+**3) 唐奇安上轨（关键位 L，不含当日）**：
+
+```
+res_level_t = max( H_{t−N} ... H_{t−1} )            # N 默认 60
+box_range_atr_t = ( max(H_{t−N..t−1}) − min(L_{t−N..t−1}) ) / ATR_t   # 蓄势紧致度，越小越紧
+```
+
+**4) 突破 run 状态机（幅度的时间维度基础）**：
+
+```
+run 起点 t0：C_{t0} > res_level_{t0} 且 t0−1 不在 run 中
+run_level  = res_level_{t0}                          # 突破时冻结的关键位（关键！不能用当日 res_level，否则位上漂，"站稳"永远判不出来）
+run 延续条件：C_t > run_level                         # 允许回踩，只要守住被突破的位
+run 终止：C_t ≤ run_level → 该日 run_pos=0，判定失效
+run_pos_t = 自 run 起点起的第几个交易日（含突破日，1 = 突破当日）
+```
+
+**5) 幅度与量能证据**（相对冻结的 `run_level`，而非当日上轨）：
+
+```
+d_abs_t = C_t − run_level
+a_pct_t = d_abs_t / run_level                        # 对应"百分之三原则"那一族
+z_atr_t = d_abs_t / ATR_t                            # 对应"ATR 倍数"那一族
+amt_base_t = mean(amount_{t−vbase} ... amount_{t−1}) # vbase 默认 20，注意不含当日（防自指偏误）
+r_vol_t = amount_t / amt_base_t
+```
+
+**6) 涨停标记**：`limit_up = pct_chg ≥ limit_pct − 0.3%`（20% 板按代码前缀 `30` 判定，其余 10%；ST 的 5% 用全样本 |pct_chg| 的 99.5 分位推断）。**涨停封板日成交极小，`r_vol` 会误判为缩量，量能条件须豁免**——这是美股框架移植 A 股的必要修正。
+
+### 表结构
+
+> 命名约定：`_20` / `_60` / `_120` 后缀 = 唐奇安窗口 N 的三档预设。三档**同时物化**，故在扫描页切换 N 无需重跑 ETL。`a_pct = d_abs_N ÷ run_level_N`、`z_atr = d_abs_N ÷ atr` 是纯除法，**不落库**，由 API 实时计算。
+
+| 字段 | 类型 | 约束 | 说明 |
+|---|---|---|---|
+| code | VARCHAR | PK 复合, NOT NULL, FK→investable_asset | 标的代码 |
+| date | DATE | PK 复合, NOT NULL | 交易日 |
+| open / high / low / close | DOUBLE | NOT NULL | 前复权价（脚本自建因子） |
+| amount | DOUBLE | NULL | 成交额（元）——**量能判据用它**，对送转免疫 |
+| volume | BIGINT | NULL | 成交量（股），展示用；BIGINT 因单日可超 21 亿股 |
+| atr / atr_pct | DOUBLE | NULL | ATR(14, Wilder RMA) 及其占收盘价比例 |
+| res_level_20 / _60 / _120 | DOUBLE | NULL | 三档唐奇安上轨（均为前 N 日，不含当日） |
+| box_range_atr | DOUBLE | NULL | 箱体高度 ÷ ATR（N=60），蓄势紧致度 |
+| run_pos_20 / _60 / _120 | INTEGER | NULL | 自突破日已确认的交易日数（1=突破当日；0=不在 run 中） |
+| run_level_20 / _60 / _120 | DOUBLE | NULL | 被突破的关键位（突破日冻结） |
+| run_start_date_20 / _60 / _120 | DATE | NULL | 本轮突破日 |
+| d_abs_20 / _60 / _120 | DOUBLE | NULL | 穿透距离 = 收盘 − run_level_N |
+| amt_base | DOUBLE | NULL | 前 20 日平均成交额（不含当日） |
+| r_vol | DOUBLE | NULL | 量能倍数 = amount ÷ amt_base |
+| amt_base_50 / r_vol_50 | DOUBLE | NULL | 50 日基准版本（中期平台突破用） |
+| pct_chg | DOUBLE | NULL | 涨跌幅（复权口径） |
+| limit_up | BOOLEAN | NULL | 是否涨停（量能条件豁免用） |
+| ret5 / ret10 / ret20 | DOUBLE | NULL | **事后**收益（仅用于校准，禁止用于选股） |
+| updated_at | TIMESTAMP | DEFAULT now() | 入库时间 |
+
+**说明**：
+- 只落最近 `--days`（默认 300）个交易日，`--days` 可调；回测标定请用离线脚本直读 `market.duckdb`，不要把全部历史塞进本库。
+- `state`（无/突破日/确认中/已确认/失效）**不落库**——它依赖确认天数 `m` 这个查询参数，由 API 依 `run_pos_N` 实时推导。
+- **禁止未来函数**：所有基准窗口（`res_level_N` / `amt_base`）一律 `t−N ... t−1`，不含当日；`run_level_N` 冻结于突破日。
+- 已知近似：ST 的 5% 涨跌停幅度用全样本 `|pct_chg|` 的 99.5 分位**事后**推断，存在轻微前视；后续应补一张按日的 `is_st` 表替代。
 
 ---
 

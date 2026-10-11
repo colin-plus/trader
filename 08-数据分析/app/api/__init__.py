@@ -316,6 +316,237 @@ def meta():
     return {"meta": rows}
 
 
+# ==================== 突破确认（breakout_feature 证据层） ====================
+# 设计：表里只存证据，阈值在查询时施加（见 docs/schema.md）。
+# 唐奇安 N 与量能基准为物化预设，请求值会 snap 到最近档并在 params 中回报实际口径。
+
+_BREAKOUT_N_PRESETS = (20, 60, 120)
+_BREAKOUT_VBASE_PRESETS = (20, 50)
+
+
+def _snap(value: float, presets) -> int:
+    return min(presets, key=lambda p: abs(p - value))
+
+
+def _breakout_latest_complete_date() -> Optional[str]:
+    """最后一个"完整"交易日。
+
+    market.duckdb 末尾常有残缺抓取（如仅 6 只股票），直接用 MAX(date) 会得到空结果。
+    判据：当日股票数 ≥ 近 60 个交易日股票数中位数的 99%。
+    """
+    rows = db.query_all(
+        """
+        WITH d AS (SELECT date, COUNT(*) AS n FROM breakout_feature GROUP BY date),
+             m AS (SELECT median(n) AS med FROM (SELECT n FROM d ORDER BY date DESC LIMIT 60))
+        SELECT MAX(d.date) AS latest FROM d, m WHERE d.n >= 0.99 * m.med
+        """
+    )
+    latest = rows[0]["latest"] if rows else None
+    return latest.isoformat() if latest else None
+
+
+@router.get("/breakout/meta")
+def breakout_meta():
+    """证据层元信息（数据覆盖、最新完整交易日、物化口径）"""
+    rows = db.query_all(
+        "SELECT COUNT(*) AS n, COUNT(DISTINCT code) AS n_codes, MIN(date) AS d0, MAX(date) AS d1 "
+        "FROM breakout_feature"
+    )
+    r = rows[0] if rows else {}
+    updated = db.query_all("SELECT value FROM meta WHERE key = 'breakout_feature_updated_at'")
+    return {
+        "date_min": r.get("d0").isoformat() if r.get("d0") else None,
+        "date_max": r.get("d1").isoformat() if r.get("d1") else None,
+        "latest_complete_date": _breakout_latest_complete_date(),
+        "n_codes": r.get("n_codes", 0),
+        "n_rows": r.get("n", 0),
+        "updated_at": updated[0]["value"] if updated else None,
+        "n_presets": list(_BREAKOUT_N_PRESETS),
+        "vbase_presets": list(_BREAKOUT_VBASE_PRESETS),
+        "note": "表内只存证据；阈值（k/theta/m/rmin/rmax）查询时施加，调参不需重跑 ETL。",
+    }
+
+
+@router.get("/breakout/scan")
+def breakout_scan(
+    date: Optional[str] = Query(None),
+    n: int = Query(60),
+    vbase: int = Query(20),
+    m: int = Query(1, ge=0, le=10),
+    mode: str = Query("atr", pattern="^(atr|abs|both)$"),
+    k: float = Query(1.0),
+    theta: float = Query(0.03),
+    rmin: float = Query(1.5),
+    rmax: float = Query(3.0),
+    max_elapsed: int = Query(10, ge=1, le=60),
+    run_min: int = Query(1, ge=1, le=60),
+    run_max: Optional[int] = Query(None, ge=1, le=60),
+    min_pass: int = Query(3, ge=1, le=3),
+    limit: int = Query(100, ge=1, le=500),
+):
+    """全市场扫描：可选"突破距今多久"与"满足几道门槛"。
+
+    **突破距今（run_pos = 自突破日起的交易日数，含突破当日）**：
+      run_pos=1 → 今天突破；2 → 昨天突破；3 → 2 天前突破；N+1 → N 天前突破
+      `run_min` / `run_max` 给出允许区间；`run_max` 缺省取 `max_elapsed`。
+      太久以前的突破已无交易意义，用这个参数即可只看"今天/昨天/N 天前"。
+
+    三道门槛各自独立判定，`pass_count` 是它们的和：
+      幅度 ok_amp : 突破日 t0 的穿透幅度达到阈值（mode / k / theta）
+      时间 ok_time: 自 t0 起已确认交易日数 run_pos ∈ [m+1, max_elapsed]
+      量能 ok_vol : t0 的量能倍数落在 [rmin, rmax]（涨停封板日豁免）
+
+    `min_pass=3` 等价于"三原则全部满足"；`min_pass=2` 用于**对比近似信号**。
+    注意：选"今天突破"（run_pos=1）时，时间门槛必然未通过（还没经过确认），
+    所以要把 `min_pass` 调到 2 才看得到——这是设计使然，不是 bug。
+    """
+    N = _snap(n, _BREAKOUT_N_PRESETS)
+    VB = _snap(vbase, _BREAKOUT_VBASE_PRESETS)
+    rcol = "r_vol" if VB == 20 else "r_vol_50"
+
+    # 距今窗口：不超过 max_elapsed（未过期）
+    run_max_eff = min(run_max or max_elapsed, max_elapsed)
+    run_min_eff = min(run_min, run_max_eff)
+
+    asof = date or _breakout_latest_complete_date()
+    if not asof:
+        raise HTTPException(404, "breakout_feature 为空，请先运行 scripts/build_breakout_features.py")
+
+    # 注意：以下表达式在 g 里使用 j 的裸列名（a0 / z0 / r0 / lim0）
+    if mode == "atr":
+        amp = "(z0 >= ?)"
+        amp_params = [k]
+    elif mode == "abs":
+        amp = "(a0 >= ?)"
+        amp_params = [theta]
+    else:
+        amp = "(z0 >= ? AND a0 >= ?)"
+        amp_params = [k, theta]
+
+    sql = f"""
+    WITH win AS (
+        SELECT * FROM breakout_feature
+        WHERE date BETWEEN CAST(? AS DATE) - INTERVAL 150 DAY AND CAST(? AS DATE)
+    ),
+    cur AS (SELECT * FROM win WHERE date = CAST(? AS DATE)),
+    j AS (
+        SELECT c.code, c.date, c.close, c.run_pos_{N} AS run_pos,
+               c.run_start_date_{N} AS run_start_date, c.res_level_{N} AS res_level,
+               c.box_range_atr, c.atr_pct,
+               s.d_abs_{N} AS d0, s.run_level_{N} AS l0, s.atr AS atr0,
+               s.{rcol} AS r0, s.limit_up AS lim0,
+               s.ret5, s.ret10, s.ret20,
+               s.d_abs_{N} / NULLIF(s.run_level_{N}, 0) AS a0,
+               s.d_abs_{N} / NULLIF(s.atr, 0) AS z0
+        FROM cur c
+        JOIN win s ON s.code = c.code AND s.date = c.run_start_date_{N}
+        WHERE c.run_pos_{N} > 0 AND s.run_level_{N} > 0 AND s.atr > 0
+    ),
+    g AS (
+        SELECT j.*,
+               CASE WHEN run_pos BETWEEN ? AND ? THEN 1 ELSE 0 END AS ok_time,
+               CASE WHEN {amp} THEN 1 ELSE 0 END AS ok_amp,
+               CASE WHEN (r0 >= ? AND r0 <= ?) OR COALESCE(lim0, FALSE) THEN 1 ELSE 0 END AS ok_vol
+        FROM j
+        WHERE run_pos BETWEEN ? AND ?
+    ),
+    s2 AS (SELECT g.*, (g.ok_time + g.ok_amp + g.ok_vol) AS pass_count FROM g)
+    SELECT s2.*, COUNT(*) OVER () AS total, a.name
+    FROM s2 LEFT JOIN investable_asset a ON a.code = s2.code
+    WHERE s2.pass_count >= ?
+    ORDER BY s2.pass_count DESC, s2.z0 DESC NULLS LAST
+    LIMIT ?
+    """
+    params = ([asof, asof, asof, m + 1, max_elapsed] + amp_params
+              + [rmin, rmax, run_min_eff, run_max_eff, min_pass, limit])
+    rows = db.query_all(sql, params)
+    total = rows[0].pop("total") if rows else 0
+
+    out = []
+    for r in rows:
+        a0, z0, r0 = r.get("a0"), r.get("z0"), r.get("r0")
+        pass_amp = bool(r.get("ok_amp"))
+        pass_time = bool(r.get("ok_time"))
+        pass_vol = bool(r.get("ok_vol"))  # 涨停封板日成交极小，SQL 中已豁免
+        pass_count = int(r.get("pass_count") or 0)
+        out.append({
+            "code": r["code"], "name": r.get("name") or r["code"], "date": r["date"].isoformat(),
+            "close": r["close"], "run_start_date": r["run_start_date"].isoformat() if r["run_start_date"] else None,
+            "run_pos": r["run_pos"], "run_level": r["l0"], "a_pct": a0, "z_atr": z0,
+            "days_ago": (r["run_pos"] - 1) if r.get("run_pos") is not None else None,
+            "atr_pct": r.get("atr_pct"), "r_vol": r0, "res_level": r.get("res_level"),
+            "box_range_atr": r.get("box_range_atr"), "is_limit_up": bool(r.get("lim0")),
+            "pass_amp": pass_amp, "pass_time": pass_time, "pass_vol": pass_vol,
+            "pass_count": pass_count, "passed": pass_count == 3,
+            "ret5": r.get("ret5"), "ret10": r.get("ret10"), "ret20": r.get("ret20"),
+        })
+    return {
+        "date": asof,
+        "params": {"n": N, "vbase": VB, "m": m, "mode": mode, "k": k, "theta": theta,
+                   "rmin": rmin, "rmax": rmax, "max_elapsed": max_elapsed, "min_pass": min_pass,
+                   "run_min": run_min_eff, "run_max": run_max_eff},
+        "count": total,
+        "rows": out,
+    }
+
+
+@router.get("/breakout/{code}")
+def breakout_detail(
+    code: str,
+    days: int = Query(120, ge=20, le=1000),
+    n: int = Query(60),
+    vbase: int = Query(20),
+    m: int = Query(1, ge=0, le=10),
+):
+    """单标的突破证据序列（供 K 线叠加：关键位 / ATR / 量能倍数 / 状态）"""
+    if code not in _valid_codes():
+        raise HTTPException(404, f"未跟踪的股票代码: {code}")
+    N = _snap(n, _BREAKOUT_N_PRESETS)
+    VB = _snap(vbase, _BREAKOUT_VBASE_PRESETS)
+    rcol = "r_vol" if VB == 20 else "r_vol_50"
+
+    rows = db.query_all(
+        f"""
+        SELECT date, open, high, low, close, volume, amount,
+               atr, atr_pct, res_level_{N} AS res_level,
+               run_pos_{N} AS run_pos, run_level_{N} AS run_level,
+               run_start_date_{N} AS run_start_date,
+               d_abs_{N} AS d_abs, {rcol} AS r_vol, amt_base, limit_up,
+               CASE WHEN run_level_{N} > 0 THEN d_abs_{N} / run_level_{N} END AS a_pct,
+               CASE WHEN atr > 0 THEN d_abs_{N} / atr END AS z_atr
+        FROM breakout_feature WHERE code = ? ORDER BY date DESC LIMIT ?
+        """,
+        [code, days + 1],
+    )
+    rows.reverse()
+    # 多取 1 行是为了让第一行的状态能参考前一日；状态算完后再裁掉
+    prev_pos = None
+    for r in rows:
+        pos = r.get("run_pos") or 0
+        if pos == 1:
+            state = "突破日"
+        elif pos > 1 and pos < m + 1:
+            state = "确认中"
+        elif pos >= m + 1:
+            state = "已确认"
+        elif pos == 0 and (prev_pos or 0) > 0:
+            state = "失效"
+        else:
+            state = "无"
+        r["state"] = state
+        r["is_breakout_day"] = pos == 1
+        r["amt"] = r.pop("amount", None)
+        r["limit_up"] = bool(r.get("limit_up"))
+        r["date"] = r["date"].isoformat()
+        if r.get("run_start_date"):
+            r["run_start_date"] = r["run_start_date"].isoformat()
+        prev_pos = pos
+    if len(rows) > days:
+        rows = rows[-days:]
+    return {"code": code, "name": _asset_name(code),
+            "params": {"n": N, "vbase": VB, "m": m, "days": days}, "rows": rows}
+
+
 def _valid_codes() -> set:
     rows = db.query_all("SELECT code FROM investable_asset")
     return {r["code"] for r in rows}
