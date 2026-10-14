@@ -83,15 +83,21 @@ def jitter(lo=2.0, hi=4.0):
     time.sleep(random.uniform(lo, hi))
 
 
-def git_commit(message, vault=VAULT):
-    """vault 有改动则 add/commit/push；无改动返回 None。push 失败只告警。"""
+def git_commit(message, paths=None, vault=VAULT):
+    """提交并推送 vault 的改动；无改动返回 None，push 失败只告警。
+
+    paths 给定时**只**提交这些路径——绝不能在这里用 `git add -A`：
+    用户随时可能在 Obsidian 里写笔记，自动化不能把未完成的编辑卷进提交。
+    """
     def run(*args):
         return subprocess.run(["git", "-C", str(vault)] + list(args),
                               capture_output=True, text=True)
-    if not run("status", "--porcelain").stdout.strip():
+    scope = list(paths) if paths else []
+    status_args = ["status", "--porcelain"] + (["--"] + scope if scope else [])
+    if not run(*status_args).stdout.strip():
         return None
-    run("add", "-A")
-    c = run("commit", "-m", message)
+    run(*(["add"] + (["--"] + scope if scope else ["-A"])))
+    c = run(*(["commit", "-m", message] + (["--"] + scope if scope else [])))
     if c.returncode != 0:
         raise RuntimeError("git commit 失败: " + (c.stderr or c.stdout).strip()[:200])
     p = run("push", "origin", "main")

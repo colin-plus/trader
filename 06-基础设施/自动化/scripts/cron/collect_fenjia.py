@@ -276,7 +276,7 @@ def main():
             print("  ✗ " + f, file=sys.stderr)
 
     if not args.no_commit and (done or failed):
-        msg = git_commit("分价成交量日更（cron 自动）")
+        msg = git_commit("分价成交量日更（cron 自动）", paths=["03-市场研究/个股档案"])
         if msg and not args.quiet:
             print("  git: " + msg)
     return 1 if failed else 0
